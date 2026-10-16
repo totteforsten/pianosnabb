@@ -151,6 +151,7 @@ const FFT = 16384;
 const chroma = new Float32Array(12);
 const smooth = new Float32Array(12);
 let liveNotes = [];       // midi numbers of detected peaks
+let lastPeaks = [], lastFloor = -95; // raw spectral peaks from the last frame (for the piano recorder)
 let detected = null;      // {name, root, type, bass, score}
 let history = [];         // last N detections for majority vote
 let rms = 0;
@@ -232,6 +233,7 @@ function analyse(){
 
   // Live note list: strongest peaks, distinct pitch, limited to 6
   peaks.sort((a,b)=>b.amp-a.amp);
+  lastPeaks=peaks; lastFloor=floorDb;
   const seen=new Set(); liveNotes=[];
   for(const p of peaks){ if(p.midi<36||p.midi>96) continue; if(seen.has(p.midi)) continue; seen.add(p.midi); liveNotes.push(p.midi); if(liveNotes.length>=6) break; }
   liveNotes.sort((a,b)=>a-b);
@@ -275,8 +277,7 @@ function pushHistory(d){
 
 function loop(){
   if(!listening) return;
-  if(!midiOn) analyse(); // MIDI is exact and takes precedence over the microphone
-  else if(hum.rec) analyser.getFloatTimeDomainData(timeData); // hum needs raw audio even in MIDI mode
+  if(!midiOn || (hum.rec&&hum.source!=='midi')) analyse(); // MIDI is exact and takes precedence, except while recording from the mic
   renderLive();
   drillTick();
   humTick();
@@ -335,6 +336,7 @@ function updateMidiText(){
 }
 function onMidi(e){
   const [status,d1,d2]=e.data; const cmd=status&0xf0;
+  if(hum.rec&&hum.source==='midi') humMidiEvent(cmd,d1,d2,performance.now());
   if(cmd===0x90 && d2>0) held.set(d1,d2);
   else if(cmd===0x80 || (cmd===0x90&&d2===0)) held.delete(d1);
   else if(cmd===0xB0 && d1===123) held.clear(); // all notes off
@@ -371,55 +373,121 @@ function midiLoop(){
 }
 
 /* ============================================================
-   Hum-to-melody: monophonic pitch tracking, piano-roll editing, chord suggestion
+   Recording: voice (pitch tracking), piano via mic (polyphonic peak tracking), MIDI (exact)
+   Raw events are stored in milliseconds; tempo is estimated from the player's own onsets
+   afterwards, so free-time playing lands correctly on the roll. Quantization is optional.
    ============================================================ */
-const hum = {rec:false, notes:[], cur:null, t0:0, practice:false, pIdx:0, pHold:0, buf:null, oct:0, bpm:100, playing:null, steps:[]};
-const HUM_MIN_MS=160;
+const hum = {rec:false, source:'voice', raw:[], notes:[], t0:0, practice:false, pIdx:0, pHold:0, buf:null, oct:0, bpm:100, playing:null, steps:[], grid:0,
+             // voice tracker state
+             v:{cur:null, pitchHist:[], rmsPeak:0, dipped:false, miss:0, cand:null, candN:0},
+             // piano-mic tracker state: midi -> {on:frames, off:frames, db, startMs, peakDb}
+             p:{active:new Map(), seen:new Map()}};
 const humRoll = new PianoRoll(el('humRoll'), {
   editable:true, grid:0.25, ppb:56, rowH:16,
   onChange:()=>{ hum.notes=humRoll.notes; humAfterEdit(); },
   onSelect:n=>{ el('rtDel').disabled=!n; },
-  onTap:n=>PianoAudio.play(n.m+hum.oct,{dur:Math.max(.3,n.d*60/hum.bpm)}),
-  onEmptyTap:(t,m)=>{ const n=humRoll.addNote(t,m,1); PianoAudio.play(m+hum.oct,{dur:.5}); },
+  onTap:n=>PianoAudio.play(n.m+hum.oct,{dur:Math.max(.3,n.d*60/hum.bpm),vel:n.vel??.8}),
+  onEmptyTap:(t,m)=>{ humRoll.addNote(t,m,1); PianoAudio.play(m+hum.oct,{dur:.5}); },
   onKey:m=>PianoAudio.play(m+hum.oct,{dur:.6})
 });
-function beatMs(){ return 60000/hum.bpm; }
 el('humBpm').addEventListener('input',e=>{ hum.bpm=+e.target.value; el('humBpmV').textContent=hum.bpm+' bpm'; });
+el('srcSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  if(hum.rec) humStop();
+  hum.source=b.dataset.src; el('srcSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+  el('humCents').textContent = hum.source==='voice'?'nynna, vissla eller sjung "da-da-da"':hum.source==='piano'?'spela på pianot, mobilen lyssnar':'spela på MIDI-keyboardet';
+}));
+el('gridSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  hum.grid=+b.dataset.grid; el('gridSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+  humRoll.opts.grid = hum.grid||0.25;
+  if(hum.raw.length) rawToNotes(); else if(hum.grid){ humRoll.quantize(hum.grid); }
+  humRoll.draw();
+}));
 el('humRec').addEventListener('click', async()=>{
   if(hum.rec){ humStop(); return; }
-  if(!listening){ await toggleMic(); if(!listening) return; }
+  if(hum.source==='midi'){ if(!midiOn){ await toggleMidi(); if(!midiOn) return; } }
+  else { if(!listening){ await toggleMic(); if(!listening) return; } }
   PianoAudio.init();
-  hum.rec=true; hum.practice=false; hum.cur=null; hum.t0=0;
+  hum.rec=true; hum.practice=false; hum.raw=[]; hum.t0=0;
+  hum.v={cur:null,pitchHist:[],rmsPeak:0,dipped:false,miss:0,cand:null,candN:0}; hum.p={active:new Map(),seen:new Map()};
+  hum.notes=[]; humRoll.setNotes([]); el('humChordsCard').hidden=true; el('humInfo').textContent='';
   el('humRec').textContent='■ Stopp'; el('humState').textContent='spelar in'; el('humState').className='chip now';
 });
 function humStop(){
-  hum.rec=false; humCommit(performance.now());
-  el('humRec').textContent='● Spela in'; el('humState').textContent=hum.notes.length?hum.notes.length+' toner':'redo'; el('humState').className='chip';
-  humRoll.setNotes(hum.notes); humRoll.scrollToStart();
-  humAfterEdit();
+  if(!hum.rec) return;
+  const now=performance.now();
+  hum.rec=false; voiceCommit(now); pianoFlush(now); midiFlush(now);
+  el('humRec').textContent='● Spela in';
+  if(hum.raw.length){
+    const est=estimateTempo(hum.raw);
+    hum.bpm=est.bpm; el('humBpm').value=hum.bpm; el('humBpmV').textContent=hum.bpm+' bpm';
+    rawToNotes();
+    el('humInfo').textContent=`${hum.raw.length} toner · puls ≈ ${est.bpm} bpm${est.confident?'':' (osäker, justera tempot)'} · ${hum.grid?'snäppt till rutnät':'fri tid'}`;
+  }
+  el('humState').textContent=hum.raw.length?hum.raw.length+' toner':'inget hördes'; el('humState').className='chip';
+  humRoll.scrollToStart();
+}
+/* ---- tempo estimation from inter-onset intervals ---- */
+function estimateTempo(raw){
+  const on=[...new Set(raw.map(n=>Math.round(n.startMs)))].sort((a,b)=>a-b);
+  const ioi=[]; for(let i=1;i<on.length;i++){ const d=on[i]-on[i-1]; if(d>=110&&d<=2400) ioi.push(d); }
+  if(ioi.length<3) return {bpm:100,confident:false};
+  // cluster IOIs on a log scale; the densest cluster is the base pulse unit
+  const logs=ioi.map(d=>Math.log2(d)).sort((a,b)=>a-b);
+  let best={c:0,v:0};
+  for(const x of logs){ const c=logs.filter(y=>Math.abs(y-x)<0.18).length; if(c>best.c) best={c,v:x}; }
+  const members=ioi.filter(d=>Math.abs(Math.log2(d)-best.v)<0.18).sort((a,b)=>a-b);
+  const base=members[Math.floor(members.length/2)];
+  // choose a beat = base × k so bpm falls in 60–150; pick the k that best explains all IOIs as small multiples
+  let bestK=null;
+  for(const k of [0.5,1,2,3,4]){
+    const beat=base*k, bpm=60000/beat; if(bpm<56||bpm>160) continue;
+    let err=0; ioi.forEach(d=>{ const r=d/beat; const q=Math.max(0.5,Math.round(r*2)/2); err+=Math.abs(r-q)/q; });
+    err/=ioi.length; const score=err+(bpm<70||bpm>130?0.08:0);
+    if(!bestK||score<bestK.score) bestK={k,bpm:Math.round(bpm),score};
+  }
+  if(!bestK) return {bpm:Math.round(Math.min(150,Math.max(60,60000/base))),confident:false};
+  // refine: re-centre the beat on all intervals (each interval = q beats, q in halves), two passes
+  let beat=base*bestK.k;
+  for(let pass=0;pass<2;pass++){
+    const est=ioi.map(d=>{ const q=Math.max(0.5,Math.round(d/beat*2)/2); return d/q; }).sort((a,b)=>a-b);
+    const mid=est.slice(Math.floor(est.length*0.2),Math.ceil(est.length*0.8)); // trimmed mean
+    beat=mid.reduce((a,b)=>a+b,0)/mid.length;
+  }
+  return {bpm:Math.round(60000/beat),confident:best.c>=Math.max(3,ioi.length*0.4)&&bestK.score<0.12};
+}
+/* ---- ms events -> roll notes in beats, optional snapping ---- */
+function rawToNotes(){
+  const bm=60000/hum.bpm; const t0=Math.min(...hum.raw.map(n=>n.startMs));
+  const g=hum.grid;
+  const snap=v=>g?Math.round(v/g)*g:Math.round(v*32)/32;
+  hum.notes=hum.raw.map((n,i)=>{
+    let t=(n.startMs-t0)/bm, d=Math.max(0.1,(n.endMs-n.startMs)/bm);
+    if(g){ t=snap(t); d=Math.max(g,snap(d)); } else { t=snap(t); d=snap(d); }
+    return {id:i+1,t,d,m:n.m,vel:n.vel??0.8};
+  });
+  humRoll.setNotes(hum.notes); humAfterEdit();
 }
 function humAfterEdit(){
   hum.notes=humRoll.notes;
   if(hum.notes.length>=2) humSuggestChords(); else el('humChordsCard').hidden=true;
   drawPiano(el('pianoHum'), hum.notes.map(n=>n.m+hum.oct), []);
 }
-el('humClear').addEventListener('click',()=>{ hum.notes=[]; hum.practice=false; humRoll.setNotes([]); el('humChordsCard').hidden=true; el('humState').textContent='redo'; el('humState').className='chip'; el('humPractice').textContent='Öva melodin'; drawPiano(el('pianoHum')); });
+el('humClear').addEventListener('click',()=>{ if(hum.rec) humStop(); hum.notes=[]; hum.raw=[]; hum.practice=false; humRoll.setNotes([]); el('humChordsCard').hidden=true; el('humInfo').textContent=''; el('humState').textContent='redo'; el('humState').className='chip'; el('humPractice').textContent='Öva melodin'; drawPiano(el('pianoHum')); });
 el('humOctSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ hum.oct=+b.dataset.oct; el('humOctSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); humAfterEdit(); }));
-// roll tools
 el('rtUp').addEventListener('click',()=>{ humRoll.nudgeSelected(1); if(humRoll.selected) PianoAudio.play(humRoll.selected.m+hum.oct,{dur:.4}); });
 el('rtDown').addEventListener('click',()=>{ humRoll.nudgeSelected(-1); if(humRoll.selected) PianoAudio.play(humRoll.selected.m+hum.oct,{dur:.4}); });
 el('rtAdd').addEventListener('click',()=>{ const last=humRoll.notes.reduce((a,n)=>n.t+n.d>a.t+a.d?n:a,{t:0,d:0,m:64}); humRoll.addNote(humRoll.snap(last.t+last.d), last.m, 1); });
 el('rtDel').addEventListener('click',()=>humRoll.deleteSelected());
-el('rtQuant').addEventListener('click',()=>humRoll.quantize(0.5));
+el('rtQuant').addEventListener('click',()=>{ const g=hum.grid||0.5; humRoll.quantize(g); hum.raw=[]; el('humInfo').textContent=`snäppt till ${g===1?'fjärdedelar':g===0.5?'åttondelar':g===0.25?'sextondelar':'trioler'}`; });
 el('rtZoomIn').addEventListener('click',()=>humRoll.zoom(1.3));
 el('rtZoomOut').addEventListener('click',()=>humRoll.zoom(1/1.3));
 
-// playback of the roll with a moving playhead
+/* ---- playback with moving playhead ---- */
 function playRoll(roll, notes, bpm, oct, onDone){
   PianoAudio.init();
   const bm=60/bpm, start=PianoAudio.now+0.08;
   const sorted=[...notes].sort((a,b)=>a.t-b.t);
-  sorted.forEach(n=>PianoAudio.play(n.m+oct,{dur:n.d*bm, when:0.08+n.t*bm, vel:n.hand==='L'?0.6:0.8}));
+  sorted.forEach(n=>PianoAudio.play(n.m+oct,{dur:n.d*bm, when:0.08+n.t*bm, vel:n.vel??(n.hand==='L'?0.6:0.8)}));
   const end=Math.max(...sorted.map(n=>n.t+n.d),1);
   const job={stop:false};
   (function frame(){
@@ -433,22 +501,24 @@ function playRoll(roll, notes, bpm, oct, onDone){
 el('humPlay').addEventListener('click',()=>{
   if(hum.playing){ hum.playing.stop=true; PianoAudio.stopAll(); hum.playing=null; el('humPlay').textContent='▶ Spela upp'; return; }
   if(!hum.notes.length) return;
+  if(hum.rec) humStop();
   hum.practice=false; el('humPractice').textContent='Öva melodin';
   el('humPlay').textContent='■ Stopp';
   hum.playing=playRoll(humRoll, hum.notes, hum.bpm, hum.oct, ()=>{ hum.playing=null; el('humPlay').textContent='▶ Spela upp'; });
 });
-// practice: step through notes in time order, wait for each
+/* ---- practice: step through in time order, timing-free ---- */
 function humSteps(){
   const sorted=[...hum.notes].sort((a,b)=>a.t-b.t||a.m-b.m); const steps=[];
-  sorted.forEach(n=>{ const last=steps[steps.length-1]; if(last&&Math.abs(last.t-n.t)<0.01) last.notes.push(n); else steps.push({t:n.t,notes:[n]}); });
+  sorted.forEach(n=>{ const last=steps[steps.length-1]; if(last&&Math.abs(last.t-n.t)<0.08) last.notes.push(n); else steps.push({t:n.t,notes:[n]}); });
   return steps;
 }
 el('humPractice').addEventListener('click',async()=>{
   if(!hum.notes.length) return;
   if(hum.practice){ hum.practice=false; el('humPractice').textContent='Öva melodin'; humRoll.setPlayhead(-1); el('humState').textContent=hum.notes.length+' toner'; el('humState').className='chip'; return; }
+  if(hum.rec) humStop();
   if(!listening&&!midiOn){ await toggleMic(); if(!listening) return; }
   if(hum.playing){ hum.playing.stop=true; hum.playing=null; el('humPlay').textContent='▶ Spela upp'; }
-  hum.rec=false; hum.practice=true; hum.pIdx=0; hum.pHold=0; hum.steps=humSteps();
+  hum.practice=true; hum.pIdx=0; hum.pHold=0; hum.steps=humSteps();
   el('humPractice').textContent='Avbryt övning';
   practiceShow();
 });
@@ -458,23 +528,27 @@ function practiceShow(){
   drawPiano(el('pianoHum'), st.notes.map(n=>n.m+hum.oct), liveNotes);
   el('humState').textContent=`spela ton ${hum.pIdx+1}/${hum.steps.length}`; el('humState').className='chip now';
 }
-// autocorrelation pitch detector (McLeod-style normalised), returns Hz or -1
+/* ---- voice: normalised autocorrelation pitch (McLeod), returns Hz or -1 ---- */
 function detectPitch(buf, sr){
   const N=buf.length; let rms=0; for(let i=0;i<N;i++) rms+=buf[i]*buf[i]; rms=Math.sqrt(rms/N);
-  if(rms<0.01) return -1;
-  const minLag=Math.floor(sr/1000), maxLag=Math.floor(sr/70);
-  const nsdf=new Float32Array(maxLag+1);
+  if(rms<0.008) return -1;
+  const minLag=Math.floor(sr/1100), maxLag=Math.floor(sr/65);
+  const nsdf=new Float32Array(maxLag+2);
   for(let lag=minLag;lag<=maxLag;lag++){
     let ac=0,m=0; for(let i=0;i<N-lag;i++){ ac+=buf[i]*buf[i+lag]; m+=buf[i]*buf[i]+buf[i+lag]*buf[i+lag]; }
     nsdf[lag]=2*ac/(m+1e-9);
   }
-  let best=-1,bestV=0; let started=false;
+  // collect all peaks after the first negative crossing; take the first peak that is within 80% of the global max (avoids octave-down errors)
+  const peaks=[]; let started=false;
   for(let lag=minLag+1;lag<maxLag;lag++){
     if(!started){ if(nsdf[lag]<0) started=true; continue; }
-    if(nsdf[lag]>nsdf[lag-1]&&nsdf[lag]>=nsdf[lag+1]&&nsdf[lag]>bestV){ bestV=nsdf[lag]; best=lag; if(bestV>0.9) break; }
+    if(nsdf[lag]>nsdf[lag-1]&&nsdf[lag]>=nsdf[lag+1]&&nsdf[lag]>0.3) peaks.push(lag);
   }
-  if(best<0||bestV<0.6) return -1;
-  const a=nsdf[best-1],b=nsdf[best],c=nsdf[best+1]; const p=0.5*(a-c)/(a-2*b+c);
+  if(!peaks.length) return -1;
+  const gmax=Math.max(...peaks.map(l=>nsdf[l]));
+  if(gmax<0.62) return -1;
+  const best=peaks.find(l=>nsdf[l]>=gmax*0.8);
+  const a=nsdf[best-1],b=nsdf[best],c=nsdf[best+1]; const p=0.5*(a-c)/(a-2*b+c||1e-9);
   return sr/(best+p);
 }
 function humTick(){
@@ -485,41 +559,102 @@ function humTick(){
     const ok = want.every(w=>liveNotes.some(m=>m===w || m%12===w%12)) && liveNotes.length<=want.length+1;
     drawPiano(el('pianoHum'), want, liveNotes);
     hum.pHold = ok?hum.pHold+16:0;
-    el('holdBar');
     if(hum.pHold>=220){ hum.pIdx++; hum.pHold=0; if(hum.pIdx>=hum.steps.length){ hum.practice=false; el('humPractice').textContent='Öva melodin'; el('humState').textContent='hela melodin klar!'; el('humState').className='chip done'; humRoll.setPlayhead(-1); const s=stat('hum:melody'); s.tries++; s.ok++; save(); return; } practiceShow(); }
     return;
   }
-  if(!hum.rec||!listening) return;
+  if(!hum.rec) return;
+  if(hum.source==='voice' && listening) voiceTick(now);
+  else if(hum.source==='piano' && listening) pianoTick(now);
+  else if(hum.source==='midi'){ el('humNote').innerHTML=(liveNotes.length?liveNotes.map(noteLabel).join(' '):'–')+`<small id="humCents">${hum.raw.length} toner inspelade</small>`; }
+  drawPiano(el('pianoHum'), hum.raw.slice(-24).map(n=>n.m+hum.oct), hum.source==='voice'?(hum.v.cur?[hum.v.cur.m]:[]):liveNotes);
+}
+/* voice tracker */
+function voiceTick(now){
+  const v=hum.v;
   if(!hum.buf||hum.buf.length!==2048) hum.buf=new Float32Array(2048);
   hum.buf.set(timeData.subarray(timeData.length-2048));
   const f=detectPitch(hum.buf,audioCtx.sampleRate);
+  // re-articulation on the same pitch: energy dips then recovers
+  if(rms>v.rmsPeak) v.rmsPeak=rms; else v.rmsPeak*=0.985;
+  if(rms<v.rmsPeak*0.35) v.dipped=true;
   if(f>0){
-    const midiF=69+12*Math.log2(f/440); const midi=Math.round(midiF); const cents=Math.round((midiF-midi)*100);
-    el('humNote').innerHTML=`${NOTE_NAMES[midi%12].replace('#','♯')}${Math.floor(midi/12)-1}<small id="humCents">${cents>0?'+':''}${cents} cent · ${f.toFixed(0)} Hz</small>`;
-    if(hum.cur&&hum.cur.midi===midi){ hum.cur.frames++; }
-    else { humCommit(now); hum.cur={midi,start:now,frames:1}; }
+    const midiF=69+12*Math.log2(f/440);
+    v.pitchHist.push(midiF); if(v.pitchHist.length>5) v.pitchHist.shift();
+    const med=[...v.pitchHist].sort((a,b)=>a-b)[Math.floor(v.pitchHist.length/2)];
+    const m=Math.round(med); const cents=Math.round((med-m)*100);
+    el('humNote').innerHTML=`${noteLabel(m)}<small id="humCents">${cents>0?'+':''}${cents} cent · ${f.toFixed(0)} Hz</small>`;
+    v.miss=0;
+    if(v.cur&&v.cur.m===m){
+      if(v.dipped&&rms>v.rmsPeak*0.7&&now-v.cur.startMs>160){ voiceCommit(now); v.cur={m,startMs:now,vel:Math.min(1,rms*6)}; v.dipped=false; }
+      v.cur.vel=Math.max(v.cur.vel,Math.min(1,rms*6));
+    } else {
+      // candidate must hold for 3 frames; an octave jump needs 5 (common vocal/whistle detection error)
+      if(v.cand===m) v.candN++; else { v.cand=m; v.candN=1; }
+      const need=(v.cur&&Math.abs(m-v.cur.m)===12)?5:3;
+      if(v.candN>=need){ voiceCommit(now-16*need); v.cur={m,startMs:now-16*need,vel:Math.min(1,rms*6)}; v.cand=null; v.candN=0; v.dipped=false; v.rmsPeak=rms; }
+    }
   } else {
     el('humNote').innerHTML=`–<small id="humCents">lyssnar…</small>`;
-    humCommit(now);
+    v.pitchHist=[]; v.cand=null; v.candN=0;
+    if(++v.miss>=4) voiceCommit(now-16*4);
   }
-  drawPiano(el('pianoHum'), hum.notes.map(n=>n.m+hum.oct), hum.cur?[hum.cur.midi]:[]);
 }
-function humCommit(now){
-  if(!hum.cur) return;
-  const dur=now-hum.cur.start;
+function voiceCommit(now){
+  const v=hum.v; if(!v.cur) return;
+  const dur=now-v.cur.startMs;
   if(dur>=HUM_MIN_MS){
-    if(!hum.t0) hum.t0=hum.cur.start;
-    const last=hum.notes[hum.notes.length-1];
-    const tB=(hum.cur.start-hum.t0)/beatMs(), dB=dur/beatMs();
-    // merge a repeat of the same pitch that was split by a tiny dropout
-    if(last&&last.m===hum.cur.midi&&hum.cur.start-last.endMs<80){ last.d+=dB; last.endMs=now; }
-    else hum.notes.push({id:hum.notes.length+1, t:Math.round(tB*8)/8, d:Math.max(0.25,Math.round(dB*8)/8), m:hum.cur.midi, endMs:now});
-    humRoll.setNotes(hum.notes, true); humRoll.fitRange(); humRoll.draw();
-    humRoll.scroller.scrollLeft=humRoll.scroller.scrollWidth;
+    const last=hum.raw[hum.raw.length-1];
+    if(last&&last.m===v.cur.m&&v.cur.startMs-last.endMs<60&&!v.dipped){ last.endMs=now; }
+    else hum.raw.push({m:v.cur.m,startMs:v.cur.startMs,endMs:now,vel:v.cur.vel});
+    el('humState').textContent=hum.raw.length+' toner';
   }
-  hum.cur=null;
+  v.cur=null;
 }
-// Key finding (Krumhansl-Schmuckler) + one diatonic chord per bar
+const HUM_MIN_MS=140;
+/* piano-via-mic tracker: harmonic suppression + onset/offset hysteresis + re-articulation on level jump */
+function pianoTick(now){
+  const p=hum.p;
+  const peaks=lastPeaks.filter(pk=>pk.midi>=36&&pk.midi<=96&&pk.db>lastFloor+14).sort((a,b)=>a.midi-b.midi);
+  const fundamentals=[];
+  for(const pk of peaks){
+    const harmonicOf=fundamentals.find(f=>[12,19,24,28,31,34,36].includes(pk.midi-f.midi) && f.db>pk.db-10);
+    if(!harmonicOf) fundamentals.push(pk);
+  }
+  const strongest=fundamentals.sort((a,b)=>b.db-a.db).slice(0,5);
+  const present=new Map(strongest.map(pk=>[pk.midi,pk.db]));
+  // update active notes
+  for(const [m,st] of p.active){
+    if(present.has(m)){
+      const db=present.get(m); st.off=0;
+      if(db>st.lastDb+7 && now-st.startMs>120){ // struck again
+        hum.raw.push({m,startMs:st.startMs,endMs:now,vel:st.vel}); st.startMs=now; st.peakDb=db; st.vel=Math.min(1,(db-lastFloor)/50);
+      }
+      st.lastDb=Math.max(db,st.lastDb-1.5); st.peakDb=Math.max(st.peakDb,db);
+    } else if(++st.off>=5){
+      hum.raw.push({m,startMs:st.startMs,endMs:now-16*5,vel:st.vel}); p.active.delete(m);
+    }
+  }
+  for(const [m,db] of present){
+    if(p.active.has(m)) continue;
+    const seen=(p.seen.get(m)||0)+1; p.seen.set(m,seen);
+    if(seen>=2){ p.active.set(m,{startMs:now-16,off:0,lastDb:db,peakDb:db,vel:Math.min(1,(db-lastFloor)/50)}); p.seen.delete(m); }
+  }
+  for(const m of [...p.seen.keys()]) if(!present.has(m)) p.seen.delete(m);
+  const names=[...p.active.keys()].sort((a,b)=>a-b).map(noteLabel).join(' ');
+  el('humNote').innerHTML=`${names||'–'}<small id="humCents">${hum.raw.length} toner inspelade</small>`;
+  el('humState').textContent=hum.raw.length+' toner';
+}
+function pianoFlush(now){ for(const [m,st] of hum.p.active){ hum.raw.push({m,startMs:st.startMs,endMs:now,vel:st.vel}); } hum.p.active.clear(); }
+/* MIDI recorder (called from onMidi) */
+const midiOpen=new Map();
+function humMidiEvent(cmd,d1,d2,now){
+  if(cmd===0x90&&d2>0){ midiOpen.set(d1,{startMs:now,vel:d2/127}); }
+  else if(cmd===0x80||(cmd===0x90&&d2===0)){ const o=midiOpen.get(d1); if(o){ hum.raw.push({m:d1,startMs:o.startMs,endMs:now,vel:o.vel}); midiOpen.delete(d1); el('humState').textContent=hum.raw.length+' toner'; } }
+}
+function midiFlush(now){ for(const [m,o] of midiOpen){ hum.raw.push({m,startMs:o.startMs,endMs:now,vel:o.vel}); } midiOpen.clear(); }
+function noteLabel(m){ return NOTE_NAMES[m%12].replace('#','♯')+(Math.floor(m/12)-1); }
+
+/* ---- key finding (Krumhansl-Schmuckler) + one diatonic chord per half bar ---- */
 const KS_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88], KS_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
 function humSuggestChords(){
   const notes=[...hum.notes].sort((a,b)=>a.t-b.t);
@@ -882,7 +1017,6 @@ function buildSteps(){
   ns.forEach(n=>{ const last=steps[steps.length-1]; if(last&&Math.abs(last.t-n.t)<0.01) last.notes.push(n); else steps.push({t:n.t,notes:[n]}); });
   piece.steps=steps; piece.notes=ns;
 }
-function noteLabel(m){ return NOTE_NAMES[m%12].replace('#','♯')+(Math.floor(m/12)-1); }
 function showStep(){
   const st=piece.steps[piece.idx]; if(!st){ el('pieceStep').textContent='–'; return; }
   pieceRoll.setPlayhead(st.t);

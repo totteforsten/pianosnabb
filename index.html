@@ -264,13 +264,19 @@ details[open].card summary::after{content:"–"}
 <section class="view" id="view-hum">
   <div class="card hero">
     <div class="row spread">
-      <div class="eyebrow">Nynna en melodi</div>
+      <div class="eyebrow">Spela in en melodi</div>
       <span id="humState" class="chip">redo</span>
     </div>
+    <div class="seg" id="srcSeg" role="tablist" aria-label="Källa" style="margin:.5rem 0 .2rem"><button class="on" data-src="voice" role="tab">Röst</button><button data-src="piano" role="tab">Piano via mikrofon</button><button data-src="midi" role="tab">MIDI</button></div>
     <div class="target" id="humNote">–<small id="humCents">nynna, vissla eller sjung "da-da-da"</small></div>
-    <div class="row" style="justify-content:center;margin:.3rem 0 .8rem">
+    <div class="row" style="justify-content:center;margin:.3rem 0 .6rem">
       <button id="humRec" class="primary">● Spela in</button>
       <button id="humClear" class="ghost">Rensa</button>
+    </div>
+    <p class="hint" id="humInfo" style="text-align:center;min-height:1.2em"></p>
+    <div class="row" id="gridRow" style="margin:.2rem 0 .4rem">
+      <span class="hint">Rutnät</span>
+      <div class="seg" id="gridSeg" role="tablist"><button class="on" data-grid="0" role="tab">Fri tid</button><button data-grid="1" role="tab">1/4</button><button data-grid="0.5" role="tab">1/8</button><button data-grid="0.25" role="tab">1/16</button><button data-grid="0.3333" role="tab">Triol</button></div>
     </div>
     <div class="roll-wrap">
       <div class="roll" id="humRoll"></div>
@@ -301,9 +307,10 @@ details[open].card summary::after{content:"–"}
   <div class="card">
     <div class="eyebrow">Tips</div>
     <ul style="margin:.4rem 0 0;padding-left:1.2rem;font-size:.9rem">
-      <li>Separera tonerna: "da-da-da" eller korta "doo" ger renare noter än en lång "mmm".</li>
-      <li>Håll varje ton minst en kvarts sekund, annars filtreras den bort som glid.</li>
-      <li>Nynnar du lågt hamnar melodin i vänsterhandens register – använd Oktav +1.</li>
+      <li><b>Röst:</b> "da-da-da" eller korta "doo" ger renare noter än en lång "mmm". Nynnar du lågt – använd Oktav +1.</li>
+      <li><b>Piano via mikrofon:</b> lägg mobilen nära klangbotten, spela utan pedal. Enstaka toner och tvåklanger fångas bäst; täta ackord kan tappa toner – använd MIDI för exakt.</li>
+      <li><b>MIDI:</b> koppla keyboardet och tryck MIDI uppe till höger. Allt du spelar, med anslag och timing, hamnar på rollen.</li>
+      <li>Spela i ditt eget tempo. Appen räknar ut pulsen från dina anslag efteråt. Välj Fri tid för att behålla din exakta timing, eller ett rutnät för att snäppa.</li>
     </ul>
   </div>
 </section>
@@ -468,7 +475,7 @@ details[open].card summary::after{content:"–"}
 <nav class="tabs">
   <button data-view="train" class="active"><span class="ico">🎯</span>Träna</button>
   <button data-view="listen"><span class="ico">🎙</span>Lyssna</button>
-  <button data-view="hum"><span class="ico">🎤</span>Nynna</button>
+  <button data-view="hum"><span class="ico">🎤</span>Spela in</button>
   <button data-view="theory"><span class="ico">📖</span>Teori</button>
   <button data-view="songs"><span class="ico">🎵</span>Låtar</button>
   <button data-view="progress"><span class="ico">📈</span>Framsteg</button>
