@@ -21,18 +21,18 @@
 :root{
   --bg:#f3f4f6; --bg2:#e9ebee; --surface:#ffffff; --surface2:#f0f1f4; --fg:#111317; --muted:#656a73; --line:#dcdfe4; --line2:#c7cbd2;
   --accent:#2f6df6; --accent2:#5b8dff; --accent-fg:#ffffff; --ok:#1f9d5a; --warn:#d29a16; --bad:#d64540;
-  --key-w:#ffffff; --key-w2:#eceef1; --key-b:#1b1d21; --key-frame:#2a2d33; --key-target:#5b8dff; --key-live:#3ecf7a; --shadow:0 12px 32px -16px rgba(10,12,16,.35);
+  --key-w:#ffffff; --key-w2:#eceef1; --key-b:#1b1d21; --key-frame:#2a2d33; --key-target:#5b8dff; --key-lh:#f0a848; --key-live:#3ecf7a; --shadow:0 12px 32px -16px rgba(10,12,16,.35);
   --font-display:"Archivo",system-ui,sans-serif; --font-body:"Manrope",system-ui,sans-serif; --font-mono:"JetBrains Mono",ui-monospace,monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0b0c0e; --bg2:#15171a; --surface:#16181c; --surface2:#1f2227; --fg:#f2f3f5; --muted:#9298a3; --line:#272a30; --line2:#363a42;
   --accent:#5b8dff; --accent2:#86a9ff; --accent-fg:#0a0f1c; --ok:#3ecf7a; --warn:#e6b53a; --bad:#f06560;
-  --key-w:#e8eaee; --key-w2:#d2d5db; --key-b:#0a0b0d; --key-frame:#202329; --key-target:#5b8dff; --key-live:#3ecf7a; --shadow:0 16px 40px -16px rgba(0,0,0,.8); color-scheme:dark}}
+  --key-w:#e8eaee; --key-w2:#d2d5db; --key-b:#0a0b0d; --key-frame:#202329; --key-target:#5b8dff; --key-lh:#f0a848; --key-live:#3ecf7a; --shadow:0 16px 40px -16px rgba(0,0,0,.8); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0b0c0e; --bg2:#15171a; --surface:#16181c; --surface2:#1f2227; --fg:#f2f3f5; --muted:#9298a3; --line:#272a30; --line2:#363a42;
   --accent:#5b8dff; --accent2:#86a9ff; --accent-fg:#0a0f1c; --ok:#3ecf7a; --warn:#e6b53a; --bad:#f06560;
-  --key-w:#e8eaee; --key-w2:#d2d5db; --key-b:#0a0b0d; --key-frame:#202329; --key-target:#5b8dff; --key-live:#3ecf7a; --shadow:0 16px 40px -16px rgba(0,0,0,.8); color-scheme:dark}
+  --key-w:#e8eaee; --key-w2:#d2d5db; --key-b:#0a0b0d; --key-frame:#202329; --key-target:#5b8dff; --key-lh:#f0a848; --key-live:#3ecf7a; --shadow:0 16px 40px -16px rgba(0,0,0,.8); color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);background-image:radial-gradient(900px 500px at 50% -250px,var(--bg2),transparent);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
@@ -153,6 +153,21 @@ details[open].card summary::after{content:"–"}
 .deg b{font-family:var(--font-display);font-size:.95rem}
 .deg small{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .pcap{font-size:.85rem;color:var(--muted)}
+/* piano roll */
+.roll-wrap{display:flex;flex-direction:column;gap:.5rem;margin:.4rem 0 .8rem}
+.roll{border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--surface2)}
+.roll-scroll{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.roll-canvas{display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.roll-tools{display:flex;gap:.35rem;flex-wrap:wrap}
+.roll-tools button{min-height:36px;padding:.3rem .65rem}
+.hint{font-size:.82rem;color:var(--muted)}
+.legend{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-top:.5rem}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:.35rem;vertical-align:-1px}
+.sw.R{background:var(--key-target)} .sw.L{background:var(--key-lh)} .sw.live{background:var(--key-live)}
+.piece{border:1px solid var(--line);border-radius:16px;padding:.9rem 1rem;background:var(--surface);display:flex;gap:.9rem;align-items:center;cursor:pointer}
+.piece .t{flex:1;min-width:0}.piece .t b{font-family:var(--font-display);font-size:1.05rem}.piece .t small{display:block;color:var(--muted);font-size:.8rem}
+.piece .lvl{font-family:var(--font-mono);font-size:.75rem;color:var(--accent);border:1px solid var(--line2);border-radius:999px;padding:.2rem .55rem;white-space:nowrap}
+#songMode{align-self:flex-start}
 /* hum / melody */
 .melody{display:flex;gap:4px;align-items:flex-end;min-height:72px;overflow-x:auto;padding:.4rem 0 .6rem;scrollbar-width:thin}
 .melody .empty{color:var(--muted);font-size:.85rem;align-self:center}
@@ -198,6 +213,21 @@ details[open].card summary::after{content:"–"}
 
   <div class="tip" id="levelTip"></div>
   <div class="chips" id="levelChips"></div>
+  <details class="card" id="planDetails">
+    <summary><span class="eyebrow">🗺</span> Snabbspåret – alla steg</summary>
+    <div class="dtext" style="max-width:none">
+      <p>Sex steg ackord, två steg färg och progressioner. Kör 10 minuter per dag. Appen plockar de ackord du missar oftast tills de sitter.</p>
+      <div class="levels" id="levels"></div>
+      <div class="eyebrow" style="margin-top:.4rem">Metoden</div>
+      <ol style="margin:0;padding-left:1.2rem;font-size:.92rem;display:flex;flex-direction:column;gap:.3rem">
+        <li><b>Form före namn.</b> Lär dig hur ackordet känns i handen innan du tänker på tonnamn.</li>
+        <li><b>Byten, inte ackord.</b> Träna C→G→C→G tills bytet tar under en halv sekund.</li>
+        <li><b>Omvändningar sparar rörelse.</b> C · G/B · Am/C · F/C – handen rör sig knappt.</li>
+        <li><b>Vänster hand = basen.</b> Bara grundtonen räcker för att det ska låta som en låt.</li>
+        <li><b>Spela till klick.</b> Tempot, inte svårigheten, avgör om det låter bra.</li>
+      </ol>
+    </div>
+  </details>
 </section>
 
 <!-- ===== LYSSNA ===== -->
@@ -242,13 +272,25 @@ details[open].card summary::after{content:"–"}
       <button id="humRec" class="primary">● Spela in</button>
       <button id="humClear" class="ghost">Rensa</button>
     </div>
-    <div class="melody" id="melody"><span class="empty">Din melodi dyker upp här, ton för ton.</span></div>
+    <div class="roll-wrap">
+      <div class="roll" id="humRoll"></div>
+      <div class="roll-tools" id="humTools">
+        <button class="small" id="rtUp" title="Höj en halvton">▲</button>
+        <button class="small" id="rtDown" title="Sänk en halvton">▼</button>
+        <button class="small" id="rtAdd">+ Ton</button>
+        <button class="small" id="rtDel" disabled>Ta bort</button>
+        <button class="small" id="rtQuant">Kvantisera</button>
+        <button class="small" id="rtZoomOut">−</button><button class="small" id="rtZoomIn">+</button>
+      </div>
+      <p class="hint">Dra en ton för att flytta den i tid eller tonhöjd. Dra i högerkanten för längd. Tryck i tomt utrymme för att lägga till. Tryck på klaviaturen till vänster för att höra tonen.</p>
+    </div>
     <svg class="piano" id="pianoHum" viewBox="0 0 700 150" role="img" aria-label="Klaviatur melodi"></svg>
     <div class="row" style="margin-top:.8rem">
       <button id="humPlay">▶ Spela upp</button>
       <button id="humPractice" class="primary">Öva melodin</button>
       <div class="seg" id="humOctSeg" style="margin-left:auto" role="tablist" aria-label="Oktav"><button data-oct="-12" role="tab">−1</button><button data-oct="0" class="on" role="tab">0</button><button data-oct="12" role="tab">+1</button></div>
     </div>
+    <div class="row" style="margin-top:.6rem"><label class="inline" style="flex:1">Tempo <input type="range" id="humBpm" min="50" max="160" value="100"> <span class="chip" id="humBpmV">100 bpm</span></label></div>
   </div>
   <div class="card" id="humChordsCard" hidden>
     <div class="eyebrow">Så spelar du den</div>
@@ -263,23 +305,6 @@ details[open].card summary::after{content:"–"}
       <li>Håll varje ton minst en kvarts sekund, annars filtreras den bort som glid.</li>
       <li>Nynnar du lågt hamnar melodin i vänsterhandens register – använd Oktav +1.</li>
     </ul>
-  </div>
-</section>
-
-<!-- ===== PLAN ===== -->
-<section class="view" id="view-plan">
-  <h2>Snabbspåret</h2>
-  <p style="margin:0;color:var(--muted)">Sex steg. Kör 10 minuter per dag och du spelar riktiga låtar inom en vecka. Appen plockar de ackord du missar oftast tills de sitter.</p>
-  <div class="levels" id="levels"></div>
-  <div class="card">
-    <div class="eyebrow">Metoden</div>
-    <ol style="margin:.4rem 0 0;padding-left:1.2rem;font-size:.92rem;display:flex;flex-direction:column;gap:.3rem">
-      <li><b>Form före namn.</b> Lär dig hur ackordet känns i handen – tumme, långfinger, lillfinger – innan du tänker på tonnamn.</li>
-      <li><b>Byten, inte ackord.</b> Att kunna C och G är värdelöst om bytet tar två sekunder. Träna C→G→C→G tills det tar under en halv sekund.</li>
-      <li><b>Omvändningar sparar rörelse.</b> C–G–Am–F i grundläge hoppar runt. C (C-E-G), G/B (B-D-G), Am/C (C-E-A), F/C (C-F-A): handen rör sig knappt.</li>
-      <li><b>Vänster hand = basen.</b> Spela bara grundtonen med vänster hand (oktaver när du vågar). Det låter direkt som en låt.</li>
-      <li><b>Spela till klick.</b> Metronomen i progressionssteget tvingar fram tempo. Det är tempot, inte svårigheten, som avgör om det låter bra.</li>
-    </ol>
   </div>
 </section>
 
@@ -375,9 +400,43 @@ details[open].card summary::after{content:"–"}
 
 <!-- ===== LÅTAR ===== -->
 <section class="view" id="view-songs">
-  <h2>Låtar &amp; progressioner</h2>
-  <p style="margin:0;color:var(--muted)">Alla bygger på ackorden i Snabbspåret. Tryck på en låt för att träna den med lyssning och metronom.</p>
-  <div id="songList" style="display:flex;flex-direction:column;gap:.6rem"></div>
+  <h2>Låtar</h2>
+  <div class="seg" id="songMode" role="tablist"><button class="on" data-mode="pieces" role="tab">Fingerspel</button><button data-mode="chords" role="tab">Ackordlåtar</button></div>
+
+  <div id="piecesPane">
+    <div class="card hero" id="pieceCard" hidden>
+      <div class="row spread">
+        <div><div class="eyebrow" id="pieceTitle">Für Elise</div><div class="hint" id="pieceSub"></div></div>
+        <button class="small ghost" id="pieceClose">Stäng</button>
+      </div>
+      <div class="target" id="pieceStep" style="font-size:clamp(2.2rem,11vw,3.6rem)">–</div>
+      <div class="detected" id="pieceDetect"></div>
+      <div class="hold"><i id="pieceHold"></i></div>
+      <svg class="piano" id="pianoPiece" viewBox="0 0 700 150" role="img" aria-label="Klaviatur stycke"></svg>
+      <div class="legend"><span><i class="sw R"></i>Höger hand</span><span><i class="sw L"></i>Vänster hand</span><span><i class="sw live"></i>Du spelar</span></div>
+      <div class="roll-wrap"><div class="roll" id="pieceRoll"></div></div>
+      <div class="row" style="margin-top:.6rem">
+        <button id="pieceWait" class="primary">Vänta på mig</button>
+        <button id="piecePlay">▶ Spela upp</button>
+        <button id="pieceStop" class="ghost" hidden>■ Stopp</button>
+        <button id="pieceNext" class="ghost">Nästa steg ›</button>
+      </div>
+      <div class="row" style="margin-top:.6rem">
+        <div class="seg" id="handSeg" role="tablist"><button class="on" data-hand="B" role="tab">Båda</button><button data-hand="R" role="tab">Höger</button><button data-hand="L" role="tab">Vänster</button></div>
+        <label class="inline" style="flex:1;min-width:160px">Tempo <input type="range" id="pieceBpm" min="30" max="140" value="60"> <span class="chip" id="pieceBpmV">60 bpm</span></label>
+      </div>
+      <div class="eyebrow" style="margin-top:.8rem">Sektioner</div>
+      <div class="chips" id="pieceSections" style="margin-top:.3rem"></div>
+      <p class="tip" id="pieceTip" style="margin-top:.8rem"></p>
+    </div>
+    <p class="hint" id="piecesIntro">Not för not med fingersättning. Välj hand, sänk tempot, loopa en sektion tills den sitter. I väntläget går appen vidare först när du spelat rätt tangenter (MIDI exakt, mikrofon per ton).</p>
+    <div id="pieceList" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.8rem"></div>
+  </div>
+
+  <div id="chordsPane" hidden>
+    <p class="hint">Alla bygger på ackorden i Snabbspåret. Tryck på en låt för att träna den med lyssning och metronom.</p>
+    <div id="songList" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.8rem"></div>
+  </div>
 </section>
 
 <!-- ===== FRAMSTEG ===== -->
@@ -410,927 +469,13 @@ details[open].card summary::after{content:"–"}
   <button data-view="train" class="active"><span class="ico">🎯</span>Träna</button>
   <button data-view="listen"><span class="ico">🎙</span>Lyssna</button>
   <button data-view="hum"><span class="ico">🎤</span>Nynna</button>
-  <button data-view="plan"><span class="ico">🗺</span>Plan</button>
   <button data-view="theory"><span class="ico">📖</span>Teori</button>
   <button data-view="songs"><span class="ico">🎵</span>Låtar</button>
   <button data-view="progress"><span class="ico">📈</span>Framsteg</button>
 </nav>
 
-<script>
-const el = id=>document.getElementById(id); // used throughout; must be defined before any top-level handler wiring
-/* ============================================================
-   Music theory data
-   ============================================================ */
-const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const NOTE_SV = {'C#':'Ciss','D#':'Diss','F#':'Fiss','G#':'Giss','A#':'Aiss'};
-const CHORD_TYPES = {
-  '':     {iv:[0,4,7],  label:'dur'},
-  'm':    {iv:[0,3,7],  label:'moll'},
-  'dim':  {iv:[0,3,6],  label:'förminskad'},
-  'aug':  {iv:[0,4,8],  label:'överstigande'},
-  '7':    {iv:[0,4,7,10],label:'dominantsjua'},
-  'maj7': {iv:[0,4,7,11],label:'stor sjua'},
-  'm7':   {iv:[0,3,7,10],label:'mollsjua'},
-  'sus2': {iv:[0,2,7],  label:'sus2'},
-  'sus4': {iv:[0,5,7],  label:'sus4'},
-  'dim7': {iv:[0,3,6,9],label:'förminskad sjua'},
-  'm7b5': {iv:[0,3,6,10],label:'halvförminskad'},
-  'add9': {iv:[0,2,4,7],label:'add9'},
-  'klu':  {iv:[0,2,4],  label:'kluster'},
-};
-const SYMMETRIC = new Set(['dim7','aug']);
-const FLAT_NAMES=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
-const FLAT_MAJOR_KEYS=new Set([5,10,3,8,1,6]); // F Bb Eb Ab Db Gb
-function useFlats(key,minor){ return FLAT_MAJOR_KEYS.has(minor?(key+3)%12:key); }
-// Display a chord name with the right enharmonic spelling for the key (internal names always use sharps)
-function dn(name, flats){ return name.replace(/([A-G])#/g,(m,n)=>flats?FLAT_NAMES[(NOTE_NAMES.indexOf(n)+1)%12]:n+'♯').replace(/([A-G])b/g,'$1♭'); } // same pitch-class set from several roots
-// Parse "Am/C" -> {root:9, type:'m', bass:0, name:'Am/C'}
-function parseChord(name){
-  const m = name.match(/^([A-G]#?)([a-z0-9]*)(?:\/([A-G]#?))?$/);
-  if(!m) return null;
-  const root = NOTE_NAMES.indexOf(m[1]);
-  const type = m[2]||'';
-  const bass = m[3] ? NOTE_NAMES.indexOf(m[3]) : null;
-  return {root,type,bass,name,pcs:CHORD_TYPES[type].iv.map(i=>(root+i)%12)};
-}
-// Build concrete midi notes for a chord in a sensible register (C4 = 60)
-function chordVoicing(c){
-  const base = 60; // C4
-  let notes = CHORD_TYPES[c.type].iv.map(i=>base+c.root+i);
-  if(c.bass!==null && c.bass!==c.root){
-    // rotate until the bass pitch class is lowest
-    let guard=0;
-    while((notes[0]%12)!==c.bass && guard++<4){ notes.push(notes.shift()+12); }
-    // drop into register starting around C4
-    while(notes[0]>=72) notes = notes.map(n=>n-12);
-  } else {
-    while(notes[0]>=67) notes = notes.map(n=>n-12); // keep root between C4 and F#4
-  }
-  return notes;
-}
-function fingeringText(c){
-  const n = CHORD_TYPES[c.type].iv.length;
-  const inv = c.bass===null||c.bass===c.root ? 0 : CHORD_TYPES[c.type].iv.findIndex(i=>(c.root+i)%12===c.bass);
-  const names = chordVoicing(c).map(m=>NOTE_NAMES[m%12].replace('#','♯')).join(' – ');
-  let f;
-  if(n===3) f = inv===0?'1 – 3 – 5':inv===1?'1 – 2 – 5':'1 – 3 – 5';
-  else f = inv===0?'1 – 2 – 3 – 5':'1 – 2 – 4 – 5';
-  const invTxt = inv===0?'grundläge':inv===1?'första omvändningen':'andra omvändningen';
-  return `Toner: <b>${names}</b> · Höger hand: ${f} (${invTxt}) · Vänster hand: ${NOTE_NAMES[c.bass??c.root].replace('#','♯')} som bas`;
-}
-
-/* ============================================================
-   Curriculum
-   ============================================================ */
-const LEVELS = [
-  {id:'notes', name:'Steg 1 · Hitta tangenterna', kind:'note', items:['C','D','E','F','G','A','B'],
-   tip:'C ligger direkt till vänster om de två svarta tangenterna. Hitta alla C först, sedan de andra vita. Spela varje ton en gång med höger tumme.'},
-  {id:'maj', name:'Steg 2 · Durackord', kind:'chord', items:['C','G','F','D','A','E'],
-   tip:'Alla durackord har samma form: tumme, hoppa över en tangent, långfinger, hoppa över en, lillfinger. Tänk "1-3-5". Med C, G och F kan du redan spela hundratals låtar.'},
-  {id:'min', name:'Steg 3 · Mollackord', kind:'chord', items:['Am','Em','Dm','Bm','F#m'],
-   tip:'Moll = flytta mittfingret ett halvt steg ner. C-E-G blir C-Eb-G. Am, Em och Dm är de du behöver i 90 % av poplåtarna.'},
-  {id:'inv', name:'Steg 4 · Omvändningar', kind:'chord', items:['C/E','C/G','G/B','G/D','F/A','F/C','Am/C','Am/E'],
-   tip:'Ta nedersta tonen och flytta upp den en oktav – då har du första omvändningen. Gör om det: andra. Målet är att byta ackord utan att handen flyttar mer än en tangent.'},
-  {id:'7', name:'Steg 5 · Sjuor', kind:'chord', items:['G7','C7','D7','Cmaj7','Am7','Dm7','Em7'],
-   tip:'Dominantsjua = durackord + tonen två tangenter under grundtonen (G7 = G-B-D-F). Den vill alltid vidare till ackordet fem steg ner: G7 → C.'},
-  {id:'dim', name:'Steg 6 · Förminskade', kind:'chord', items:['Bdim','Ddim','F#dim','G#dim','Bdim7','Ddim7','Bm7b5','Em7b5'],
-   tip:'Förminskad = två små terser staplade (B-D-F). Den är spänd och vill alltid gå ett halvt steg uppåt: Bdim → C. Bdim7 (B-D-F-Ab) är symmetrisk, så B, D, F och Ab-dim7 är samma ackord.'},
-  {id:'klu', name:'Steg 7 · Färg & kluster', kind:'chord', items:['Cadd9','Gadd9','Fadd9','Dadd9','Cklu','Fklu','Gklu','Dsus4','Asus2'],
-   tip:'Add9 = treklang + tonen ett helt steg över grundtonen, spelad tätt (C-D-E-G). Kluster = tre toner i rad (C-D-E). Det är dissonans med flit – spela mjukt, låt det ringa, lös upp till det rena ackordet.'},
-  {id:'prog', name:'Steg 8 · Progressioner', kind:'prog',
-   items:['C G Am F','G D Em C','Am F C G','C Am F G','C F G Em','D A Bm G','Dm G7 C C','C F G C','E B C#m A','C Bdim Am G'],
-   tip:'Spela till klicket. Byt på ettan i varje takt. När du klarar 80 bpm utan att missa: höj. Det är här det börjar låta som musik.'},
-];
-/* ---------- Scale degrees → chords (I, ii, iii, IV, V, vi, vii°) ---------- */
-const MAJOR_SCALE=[0,2,4,5,7,9,11], MINOR_SCALE=[0,2,3,5,7,8,10];
-const MAJOR_QUAL=['','m','m','','','m','dim'], MINOR_QUAL=['m','dim','','m','m','',''];
-const ROMAN=['I','II','III','IV','V','VI','VII'];
-// "I V vi IV", "1 4 5 3", "ii7 V7 Imaj7", "vii°" -> chord names in key
-function degreesToChords(str, key, minor=false){
-  const scale = minor?MINOR_SCALE:MAJOR_SCALE, qual = minor?MINOR_QUAL:MAJOR_QUAL;
-  const out=[];
-  for(const tok of str.trim().split(/[\s,–-]+/).filter(Boolean)){
-    const m = tok.match(/^(b|#)?([ivIV]+|[1-7])(°|dim|o)?(maj7|m7b5|7|sus2|sus4|add9|klu)?$/);
-    if(!m) return null;
-    let deg, upper;
-    if(/\d/.test(m[2])){ deg=+m[2]-1; upper=null; } else { deg=ROMAN.indexOf(m[2].toUpperCase()); upper=m[2]===m[2].toUpperCase(); }
-    if(deg<0) return null;
-    let root=(key+scale[deg]+(m[1]==='b'?-1:m[1]==='#'?1:0)+12)%12;
-    let type = upper===null?qual[deg]:upper?'':'m';
-    if(m[3]) type='dim';
-    if(m[4]){
-      if(m[4]==='7') type = type==='dim'?'m7b5':type==='m'?'m7':'7';
-      else type=m[4];
-    }
-    out.push(NOTE_NAMES[root]+type);
-  }
-  return out.length?out:null;
-}
-const PROGRESSIONS = [
-  {nums:'I V vi IV', name:'Popkadensen', desc:'Den vanligaste rundgången i modern pop. Allt låter bra ovanpå den.'},
-  {nums:'I vi IV V', name:'50-talsrundan', desc:'Doo-wop, ballader, "Stand by me". Samma ackord som popkadensen i annan ordning.'},
-  {nums:'vi IV I V', name:'Mollstart', desc:'Popkadensen som börjar på moll – låter mörkare och mer episk.'},
-  {nums:'I IV V I', name:'1–4–5', desc:'Hela blues-, rock- och folkmusiken. Tre ackord räcker.'},
-  {nums:'I IV V iii', name:'1–4–5–3', desc:'Som 1-4-5 men iii-ackordet i slutet ger en mjuk, oväntad landning. Vanlig i svensk vispop.'},
-  {nums:'I iii IV V', name:'1–3–4–5', desc:'Stegvis stigande bas (C–E–F–G). Känns som att något byggs upp.'},
-  {nums:'ii7 V7 Imaj7', name:'ii–V–I', desc:'Jazzens DNA. Varje jazzstandard är full av dessa.'},
-  {nums:'I V vi iii IV I IV V', name:'Pachelbel', desc:'Canon i D. Åtta ackord som fallande bas: 1-5-6-3-4-1-4-5.'},
-  {nums:'i VII VI V', name:'Andalusisk kadens', desc:'Moll med fallande bas. Flamenco, "Hit the road Jack", filmmusik.', minor:true},
-  {nums:'i VI III VII', name:'Mollepos', desc:'"Popkadensen" i moll (Am–F–C–G). Episk, melankolisk.', minor:true},
-  {nums:'I vii° vi V', name:'Med förminskat', desc:'vii° (Bdim i C) används som passage mellan I och vi. Känn hur det "glider".'},
-  {nums:'I I7 IV iv', name:'Mollsubdominant', desc:'IV som byter till moll (F → Fm) är det klassiska "bitterljuva" ögonblicket.'},
-];
-const SONGS = [
-  {title:'Fyra-ackords-låten', meta:'C–G–Am–F · 80 bpm · Samma rundgång som hundratals poplåtar använder', chords:'C G Am F', bpm:80, tip:'Vänster hand spelar bara grundtonen. Prova omvändningarna C · G/B · Am/C · F/C så handen knappt flyttar sig.'},
-  {title:'50-talsrundan', meta:'C–Am–F–G · 90 bpm · "Stand by me"-känsla', chords:'C Am F G', bpm:90, tip:'Spela varje ackord som 4 jämna fjärdedelar med höger hand. Lägg till en basgång C–A–F–G i vänster.'},
-  {title:'12-takters blues i C', meta:'C7 F7 G7 · 70 bpm · Shuffle', chords:'C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7', bpm:70, tip:'Svinga åttondelarna: lång–kort, lång–kort. Vänster hand: C–E–G–A–Bb–A–G–E ovanpå varje ackord är klassisk boogie.'},
-  {title:'Pachelbels Canon', meta:'D–A–Bm–F#m–G–D–G–A · 60 bpm · Bröllopsklassikern', chords:'D A Bm F#m G D G A', bpm:60, tip:'Basgången D–A–B–F#–G–D–G–A är hela poängen – spela den med vänster hand först, utan ackord.'},
-  {title:'Amazing Grace', meta:'G–C–G–D · 60 bpm · 3/4-takt', chords:'G C G D G C G D G', bpm:60, tip:'Tre slag per takt: bas på ettan, ackord på två och tre. Vals-känsla.'},
-  {title:'Ja må du leva', meta:'C–G–C–F–C–G–C · 110 bpm', chords:'C G C F C G C', bpm:110, tip:'Första låten att spela för folk. Melodin ligger i höger hand, så öva ackorden i vänster hand här.'},
-  {title:'ii–V–I i C (jazzgrunden)', meta:'Dm7–G7–Cmaj7 · 70 bpm', chords:'Dm7 G7 Cmaj7 Cmaj7', bpm:70, tip:'Spela Dm7 som F-A-C-D, G7 som F-G-B-D, Cmaj7 som E-G-B-C: då rör sig bara en eller två toner per byte.'},
-  {title:'Andalusisk kadens', meta:'Am–G–F–E · 100 bpm · Flamenco/filmmusik', chords:'Am G F E', bpm:100, tip:'E-dur efter F är det som ger spänningen. Håll E lite längre innan du går tillbaka till Am.'},
-];
-
-/* ============================================================
-   Persistence
-   ============================================================ */
-const LS = 'pianosnabb-v1';
-let store = {stats:{}, days:{}, level:'maj'};
-try{ const s = localStorage.getItem(LS); if(s) store = Object.assign(store, JSON.parse(s)); }catch(e){}
-function save(){ try{ localStorage.setItem(LS, JSON.stringify(store)); }catch(e){} }
-function stat(key){ return store.stats[key] ||= {ok:0, tries:0, times:[], miss:0}; }
-function mastery(key){ const s = store.stats[key]; if(!s||s.tries===0) return 0; const avg = s.times.length?s.times.reduce((a,b)=>a+b,0)/s.times.length:9; return (s.ok>=5 && avg<2) ? 2 : 1; }
-
-/* ============================================================
-   Audio input + chord detection
-   ============================================================ */
-let audioCtx=null, analyser=null, micStream=null, listening=false;
-let freqData=null, timeData=null;
-const FFT = 16384;
-const chroma = new Float32Array(12);
-const smooth = new Float32Array(12);
-let liveNotes = [];       // midi numbers of detected peaks
-let detected = null;      // {name, root, type, bass, score}
-let history = [];         // last N detections for majority vote
-let rms = 0;
-
-const micBtn = document.getElementById('micBtn');
-micBtn.addEventListener('click', toggleMic);
-
-async function toggleMic(){
-  if(listening){ stopMic(); return; }
-  try{
-    audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
-    if(audioCtx.state==='suspended') await audioCtx.resume();
-    micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
-    const src = audioCtx.createMediaStreamSource(micStream);
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = FFT;
-    analyser.smoothingTimeConstant = 0.5;
-    src.connect(analyser);
-    freqData = new Float32Array(analyser.frequencyBinCount);
-    timeData = new Float32Array(analyser.fftSize);
-    listening = true;
-    micBtn.textContent = 'Stoppa';
-    document.getElementById('micDot').classList.add('on');
-    document.getElementById('micText').textContent = 'Lyssnar';
-    requestAnimationFrame(loop);
-  }catch(err){
-    document.getElementById('micText').textContent = 'Ingen mikrofon: ' + (err.name==='NotAllowedError'?'nekad':location.protocol!=='https:'&&location.hostname!=='localhost'?'kräver https':err.name);
-  }
-}
-function stopMic(){
-  listening=false;
-  if(micStream) micStream.getTracks().forEach(t=>t.stop());
-  micBtn.textContent='Lyssna';
-  if(midiOn){ updateMidiText(); requestAnimationFrame(midiLoop); return; }
-  document.getElementById('micDot').classList.remove('on');
-  document.getElementById('micText').textContent='Av';
-  detected=null; liveNotes=[]; smooth.fill(0);
-  renderLive(); renderDrillDetect();
-}
-
-// Precompute templates: 12 roots x types
-const TEMPLATES = [];
-for(let r=0;r<12;r++) for(const [t,def] of Object.entries(CHORD_TYPES)){
-  const v = new Float32Array(12);
-  def.iv.forEach((i,k)=>{ v[(r+i)%12] = k===0?1.0:0.9; });
-  TEMPLATES.push({root:r,type:t,v,n:def.iv.length});
-}
-
-function analyse(){
-  analyser.getFloatFrequencyData(freqData);
-  analyser.getFloatTimeDomainData(timeData);
-  let sum=0; for(let i=0;i<timeData.length;i+=4) sum+=timeData[i]*timeData[i];
-  rms = Math.sqrt(sum/(timeData.length/4));
-  const sr = audioCtx.sampleRate;
-  const binHz = sr/FFT;
-  const sens = +document.getElementById('sens').value;
-  const floorDb = -95 + (10-sens)*3;       // noise floor
-  chroma.fill(0);
-  const peaks=[];
-  const lo = Math.floor(60/binHz), hi = Math.ceil(2100/binHz);
-  for(let i=lo;i<hi;i++){
-    const db = freqData[i];
-    if(db<floorDb) continue;
-    if(db<freqData[i-1] || db<freqData[i+1]) continue; // local max only
-    // parabolic interpolation for a better frequency estimate
-    const a=freqData[i-1], b=db, c=freqData[i+1];
-    const p = 0.5*(a-c)/(a-2*b+c);
-    const f = (i+p)*binHz;
-    const midi = 69+12*Math.log2(f/440);
-    const pc = ((Math.round(midi)%12)+12)%12;
-    const amp = Math.pow(10, db/20);
-    const octWeight = 1/Math.pow(2,(Math.max(0,midi-48))/24); // de-emphasise overtones
-    chroma[pc] += amp*octWeight;
-    peaks.push({midi:Math.round(midi), amp, db});
-  }
-  // Normalise & smooth over time
-  let mx=0; for(let i=0;i<12;i++) mx=Math.max(mx,chroma[i]);
-  for(let i=0;i<12;i++){ const v = mx>0?chroma[i]/mx:0; smooth[i] = smooth[i]*0.6 + v*0.4; }
-
-  // Live note list: strongest peaks, distinct pitch, limited to 6
-  peaks.sort((a,b)=>b.amp-a.amp);
-  const seen=new Set(); liveNotes=[];
-  for(const p of peaks){ if(p.midi<36||p.midi>96) continue; if(seen.has(p.midi)) continue; seen.add(p.midi); liveNotes.push(p.midi); if(liveNotes.length>=6) break; }
-  liveNotes.sort((a,b)=>a-b);
-
-  const silent = rms < 0.004*(11-sens)/5 || peaks.length===0;
-  if(silent){ pushHistory(null); return; }
-
-  // Chord matching: cosine similarity + penalty on energy outside the chord
-  let best=null;
-  let total=0; for(let i=0;i<12;i++) total+=smooth[i];
-  const active = Array.from(smooth).filter(v=>v>0.3).length;
-  for(const t of TEMPLATES){
-    if(active<=2 && t.n>3) continue;
-    let dot=0,nt=0,inChord=0;
-    for(let i=0;i<12;i++){ dot+=smooth[i]*t.v[i]; nt+=t.v[i]*t.v[i]; if(t.v[i]>0) inChord+=smooth[i]; }
-    let ns=0; for(let i=0;i<12;i++) ns+=smooth[i]*smooth[i];
-    const cos = dot/Math.sqrt(ns*nt+1e-9);
-    const coverage = inChord/(total+1e-9);
-    // every chord tone must be present reasonably strongly
-    let minTone=1; for(let i=0;i<12;i++) if(t.v[i]>0) minTone=Math.min(minTone,smooth[i]);
-    const score = cos*0.6 + coverage*0.4 + minTone*0.15 - (t.n>3?0.04:0);
-    if(!best||score>best.score) best={...t,score,minTone};
-  }
-  if(!best || best.score<0.62 || best.minTone<0.12){ pushHistory(null); return; }
-  // bass: lowest live note decides inversion display
-  const bassPc = liveNotes.length?liveNotes[0]%12:best.root;
-  const bass = (bassPc!==best.root && CHORD_TYPES[best.type].iv.some(i=>(best.root+i)%12===bassPc)) ? bassPc : best.root;
-  pushHistory({root:best.root,type:best.type,bass,score:best.score});
-}
-function pushHistory(d){
-  history.push(d); if(history.length>7) history.shift();
-  // majority vote over window
-  const counts={}; let top=null;
-  for(const h of history){ const k = h?`${h.root}|${h.type}|${h.bass}`:'-'; counts[k]=(counts[k]||0)+1; if(!top||counts[k]>counts[top]) top=k; }
-  if(top==='-' || counts[top]<3){ detected=null; return; }
-  const [r,t,b] = top.split('|');
-  const root=+r, bass=+b;
-  const name = NOTE_NAMES[root]+t+(bass!==root?'/'+NOTE_NAMES[bass]:'');
-  detected = {root,type:t,bass,name};
-}
-
-function loop(){
-  if(!listening) return;
-  if(!midiOn) analyse(); // MIDI is exact and takes precedence over the microphone
-  else if(hum.rec) analyser.getFloatTimeDomainData(timeData); // hum needs raw audio even in MIDI mode
-  renderLive();
-  drillTick();
-  humTick();
-  requestAnimationFrame(loop);
-}
-
-/* ============================================================
-   MIDI input (Bluetooth / USB keyboard) — exact chord detection
-   ============================================================ */
-let midiAccess=null, midiOn=false;
-const held = new Map(); // midi -> velocity
-const midiBtn = document.getElementById('midiBtn');
-midiBtn.addEventListener('click', toggleMidi);
-
-async function toggleMidi(){
-  if(midiOn){ stopMidi(); return; }
-  if(!navigator.requestMIDIAccess){
-    document.getElementById('micText').textContent='Web MIDI saknas i denna webbläsare';
-    return;
-  }
-  try{
-    midiAccess ||= await navigator.requestMIDIAccess({sysex:false});
-    midiAccess.onstatechange = bindMidiInputs;
-    bindMidiInputs();
-    midiOn=true;
-    midiBtn.classList.add('primary'); micBtn.classList.remove('primary');
-    document.getElementById('micDot').classList.add('on');
-    updateMidiText();
-    if(!listening) requestAnimationFrame(midiLoop);
-  }catch(err){
-    document.getElementById('micText').textContent='MIDI nekad: '+err.name;
-  }
-}
-function stopMidi(){
-  midiOn=false; held.clear();
-  if(midiAccess) for(const inp of midiAccess.inputs.values()) inp.onmidimessage=null;
-  midiBtn.classList.remove('primary'); micBtn.classList.add('primary');
-  if(!listening){ document.getElementById('micDot').classList.remove('on'); document.getElementById('micText').textContent='Av'; detected=null; liveNotes=[]; renderLive(); renderDrillDetect(); }
-}
-function bindMidiInputs(){
-  if(!midiAccess) return;
-  const box=document.getElementById('midiDevices'); box.innerHTML='';
-  let n=0;
-  for(const inp of midiAccess.inputs.values()){
-    inp.onmidimessage = onMidi; n++;
-    const c=document.createElement('span'); c.className='chip done'; c.textContent=inp.name||'MIDI-enhet'; box.appendChild(c);
-  }
-  if(!n) box.innerHTML='<span class="chip">Inga enheter anslutna</span>';
-  updateMidiText();
-}
-function updateMidiText(){
-  if(!midiOn) return;
-  const n = midiAccess ? [...midiAccess.inputs.values()].length : 0;
-  document.getElementById('micText').textContent = n?`MIDI: ${n} enhet${n>1?'er':''}`:'MIDI: väntar på enhet';
-}
-function onMidi(e){
-  const [status,d1,d2]=e.data; const cmd=status&0xf0;
-  if(cmd===0x90 && d2>0) held.set(d1,d2);
-  else if(cmd===0x80 || (cmd===0x90&&d2===0)) held.delete(d1);
-  else if(cmd===0xB0 && d1===123) held.clear(); // all notes off
-  else return;
-  midiUpdate();
-}
-function midiUpdate(){
-  liveNotes=[...held.keys()].sort((a,b)=>a-b);
-  const pcs=new Set(liveNotes.map(m=>m%12));
-  // exact chroma for the live view
-  smooth.fill(0); pcs.forEach(p=>smooth[p]=1);
-  detected=null;
-  if(pcs.size>=3){
-    // find a template whose pitch-class set equals the held set exactly; prefer fewer notes, then root = bass
-    const bass=liveNotes[0]%12;
-    let best=null;
-    for(const t of TEMPLATES){
-      if(t.n!==pcs.size) continue;
-      let ok=true; for(let i=0;i<12;i++){ if((t.v[i]>0)!==pcs.has(i)){ok=false;break;} }
-      if(!ok) continue;
-      const score = (t.root===bass?2:0) + (t.type===''||t.type==='m'?1:0);
-      if(!best||score>best.score) best={...t,score};
-    }
-    if(best){
-      const b = best.root===bass?best.root:bass;
-      detected={root:best.root,type:best.type,bass:b,name:NOTE_NAMES[best.root]+best.type+(b!==best.root?'/'+NOTE_NAMES[b]:'')};
-    }
-  }
-}
-function midiLoop(){
-  if(!midiOn || listening) return; // when mic is also on, the mic loop drives rendering
-  renderLive(); drillTick(); humTick();
-  requestAnimationFrame(midiLoop);
-}
-
-/* ============================================================
-   Hum-to-melody: monophonic pitch tracking + chord suggestion
-   ============================================================ */
-const hum = {rec:false, melody:[], cur:null, curStart:0, lastPc:null, practice:false, pIdx:0, pHold:0, buf:null};
-const HUM_MIN_MS=180;
-el('humRec').addEventListener('click', async()=>{
-  if(hum.rec){ humStop(); return; }
-  if(!listening){ await toggleMic(); if(!listening) return; }
-  hum.rec=true; hum.practice=false; hum.cur=null; hum.lastT=performance.now();
-  el('humRec').textContent='■ Stopp'; el('humState').textContent='spelar in'; el('humState').className='chip now';
-});
-function humStop(){
-  hum.rec=false; humCommit(performance.now());
-  el('humRec').textContent='● Spela in'; el('humState').textContent=hum.melody.length?hum.melody.length+' toner':'redo'; el('humState').className='chip';
-  if(hum.melody.length>=2) humSuggestChords();
-  renderMelody();
-}
-el('humClear').addEventListener('click',()=>{ hum.melody=[]; hum.practice=false; el('humChordsCard').hidden=true; el('humState').textContent='redo'; el('humState').className='chip'; renderMelody(); });
-hum.oct=0;
-el('humOctSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ hum.oct=+b.dataset.oct; el('humOctSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderMelody(); if(hum.melody.length>=2) humSuggestChords(); }));
-el('humPlay').addEventListener('click',async()=>{
-  if(!hum.melody.length) return;
-  audioCtx ||= new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') await audioCtx.resume();
-  const oct=hum.oct;
-  for(let i=0;i<hum.melody.length;i++){ const n=hum.melody[i]; markMelody(i,'now'); playNotes([n.midi+oct], Math.max(.25,n.dur/1000)); await new Promise(r=>setTimeout(r,Math.max(250,n.dur))); }
-  markMelody(-1);
-});
-el('humPractice').addEventListener('click',async()=>{
-  if(!hum.melody.length) return;
-  if(hum.practice){ hum.practice=false; el('humPractice').textContent='Öva melodin'; markMelody(-1); return; }
-  if(!listening&&!midiOn){ await toggleMic(); if(!listening) return; }
-  hum.rec=false; hum.practice=true; hum.pIdx=0; hum.pHold=0;
-  el('humPractice').textContent='Avbryt övning'; el('humState').textContent='spela ton 1'; el('humState').className='chip now';
-  practiceShow();
-});
-function practiceShow(){
-  const oct=hum.oct;
-  markMelody(hum.pIdx,'now');
-  drawPiano(el('pianoHum'), [hum.melody[hum.pIdx].midi+oct], liveNotes);
-  el('humState').textContent=`spela ton ${hum.pIdx+1}/${hum.melody.length}`;
-}
-// autocorrelation pitch detector (McLeod-style normalised), returns Hz or -1
-function detectPitch(buf, sr){
-  const N=buf.length; let rms=0; for(let i=0;i<N;i++) rms+=buf[i]*buf[i]; rms=Math.sqrt(rms/N);
-  if(rms<0.01) return -1;
-  const minLag=Math.floor(sr/1000), maxLag=Math.floor(sr/70);
-  const nsdf=new Float32Array(maxLag+1);
-  for(let lag=minLag;lag<=maxLag;lag++){
-    let ac=0,m=0; for(let i=0;i<N-lag;i++){ ac+=buf[i]*buf[i+lag]; m+=buf[i]*buf[i]+buf[i+lag]*buf[i+lag]; }
-    nsdf[lag]=2*ac/(m+1e-9);
-  }
-  // first peak after the first negative zero crossing, pick highest-quality peak above threshold
-  let best=-1,bestV=0; let started=false;
-  for(let lag=minLag+1;lag<maxLag;lag++){
-    if(!started){ if(nsdf[lag]<0) started=true; continue; }
-    if(nsdf[lag]>nsdf[lag-1]&&nsdf[lag]>=nsdf[lag+1]&&nsdf[lag]>bestV){ bestV=nsdf[lag]; best=lag; if(bestV>0.9) break; }
-  }
-  if(best<0||bestV<0.6) return -1;
-  const a=nsdf[best-1],b=nsdf[best],c=nsdf[best+1]; const p=0.5*(a-c)/(a-2*b+c);
-  return sr/(best+p);
-}
-function humTick(){
-  if(!el('view-hum').classList.contains('active')) return;
-  const now=performance.now();
-  if(hum.practice){
-    const oct=hum.oct; const want=hum.melody[hum.pIdx].midi+oct;
-    const ok = liveNotes.some(m=>m===want || m%12===want%12) && liveNotes.length<=2;
-    drawPiano(el('pianoHum'), [want], liveNotes);
-    hum.pHold = ok?hum.pHold+16:0;
-    if(hum.pHold>=250){ markMelody(hum.pIdx,'hit'); hum.pIdx++; hum.pHold=0; if(hum.pIdx>=hum.melody.length){ hum.practice=false; el('humPractice').textContent='Öva melodin'; el('humState').textContent='hela melodin klar!'; el('humState').className='chip done'; return; } practiceShow(); }
-    return;
-  }
-  if(!hum.rec||!listening) return;
-  if(!hum.buf||hum.buf.length!==2048) hum.buf=new Float32Array(2048);
-  // take the most recent 2048 samples of the time-domain buffer
-  hum.buf.set(timeData.subarray(timeData.length-2048));
-  const f=detectPitch(hum.buf,audioCtx.sampleRate);
-  if(f>0){
-    const midiF=69+12*Math.log2(f/440); const midi=Math.round(midiF); const cents=Math.round((midiF-midi)*100);
-    el('humNote').innerHTML=`${NOTE_NAMES[midi%12].replace('#','♯')}${Math.floor(midi/12)-1}<small id="humCents">${cents>0?'+':''}${cents} cent · ${f.toFixed(0)} Hz</small>`;
-    if(hum.cur&&hum.cur.midi===midi){ hum.cur.frames++; }
-    else { humCommit(now); hum.cur={midi,start:now,frames:1}; }
-  } else {
-    el('humNote').innerHTML=`–<small id="humCents">lyssnar…</small>`;
-    humCommit(now);
-  }
-  drawPiano(el('pianoHum'), hum.melody.map(n=>n.midi+(hum.oct)), hum.cur?[hum.cur.midi]:[]);
-}
-function humCommit(now){
-  if(!hum.cur) return;
-  const dur=now-hum.cur.start;
-  if(dur>=HUM_MIN_MS){
-    const last=hum.melody[hum.melody.length-1];
-    // merge a repeat of the same pitch that was split by a tiny dropout
-    if(last&&last.midi===hum.cur.midi&&hum.cur.start-last.end<80){ last.dur+=dur; last.end=now; }
-    else hum.melody.push({midi:hum.cur.midi,dur,end:now});
-    renderMelody();
-  }
-  hum.cur=null;
-}
-function renderMelody(){
-  const box=el('melody'); const oct=hum.oct;
-  if(!hum.melody.length){ box.innerHTML='<span class="empty">Din melodi dyker upp här, ton för ton.</span>'; drawPiano(el('pianoHum')); return; }
-  const lo=Math.min(...hum.melody.map(n=>n.midi)), hi=Math.max(...hum.melody.map(n=>n.midi));
-  box.innerHTML='';
-  hum.melody.forEach((n,i)=>{
-    const d=document.createElement('div'); d.className='n'; d.dataset.i=i;
-    const h=12+((n.midi-lo)/Math.max(1,hi-lo))*40;
-    d.style.minWidth=Math.min(90,34+n.dur/40)+'px';
-    d.innerHTML=`<i style="height:${h}px"></i>${NOTE_NAMES[(n.midi+oct)%12].replace('#','♯')}${Math.floor((n.midi+oct)/12)-1}`;
-    d.addEventListener('click',()=>playNotes([n.midi+oct],.5));
-    box.appendChild(d);
-  });
-  box.scrollLeft=box.scrollWidth;
-  drawPiano(el('pianoHum'), hum.melody.map(n=>n.midi+oct), []);
-}
-function markMelody(i,cls){
-  [...el('melody').children].forEach((c,k)=>{ if(k===i){ c.classList.add(cls); if(cls==='now') c.classList.remove('hit'); } else if(cls==='now') c.classList.remove('now'); });
-  if(i<0) [...el('melody').children].forEach(c=>c.classList.remove('now'));
-}
-// Key finding (Krumhansl-Schmuckler) + one diatonic chord per note group
-const KS_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88], KS_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-function humSuggestChords(){
-  const prof=new Array(12).fill(0); hum.melody.forEach(n=>prof[n.midi%12]+=n.dur);
-  let best={r:-1};
-  for(let k=0;k<12;k++) for(const [name,ks,minor] of [['dur',KS_MAJ,false],['moll',KS_MIN,true]]){
-    let r=0, a=0,b=0; const ma=prof.reduce((x,y)=>x+y,0)/12, mb=ks.reduce((x,y)=>x+y,0)/12;
-    for(let i=0;i<12;i++){ const x=prof[(i+k)%12]-ma, y=ks[i]-mb; r+=x*y; a+=x*x; b+=y*y; }
-    r/=Math.sqrt(a*b)+1e-9; if(r>best.r) best={r,key:k,minor,name};
-  }
-  const {key,minor}=best;
-  const scale=minor?MINOR_SCALE:MAJOR_SCALE, qual=minor?MINOR_QUAL:MAJOR_QUAL;
-  const diatonic=scale.map((s,i)=>({name:NOTE_NAMES[(key+s)%12]+qual[i],pcs:new Set(CHORD_TYPES[qual[i]].iv.map(v=>(key+s+v)%12)),deg:i}));
-  // group notes into ~2 beats worth (by duration), choose chord covering most weighted melody notes; prefer I/IV/V
-  const total=hum.melody.reduce((a,n)=>a+n.dur,0); const groupLen=Math.max(600,total/Math.min(8,Math.ceil(hum.melody.length/2)));
-  const groups=[]; let g=[],acc=0;
-  for(const n of hum.melody){ g.push(n); acc+=n.dur; if(acc>=groupLen){ groups.push(g); g=[]; acc=0; } }
-  if(g.length) groups.push(g);
-  const prefer=minor?[0,3,4,5,6]:[0,3,4,5,1];
-  const chords=groups.map((grp,gi)=>{
-    let bestC=null;
-    for(const c of diatonic){
-      let s=0; grp.forEach((n,i)=>{ if(c.pcs.has(n.midi%12)) s+=n.dur*(i===0?1.6:1); });
-      s += prefer.includes(c.deg)?total*0.02:0;
-      if(gi===0&&c.deg===0) s+=total*0.05; if(gi===groups.length-1&&c.deg===0) s+=total*0.05;
-      if(!bestC||s>bestC.s) bestC={s,name:c.name};
-    }
-    return bestC.name;
-  });
-  const fl=useFlats(key,minor);
-  el('humKey').innerHTML=`Melodin går i <b>${dn(NOTE_NAMES[key],fl)}-${best.name}</b>. Föreslagna ackord, ett per grupp:`;
-  el('humChords').innerHTML=chords.map(c=>`<span class="play" data-chord="${c}">${dn(c,fl)}</span>`).join('');
-  el('humChordsCard').hidden=false;
-}
-
-/* ============================================================
-   Playback (reference sound)
-   ============================================================ */
-function playNotes(midis, dur=1.2){
-  audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  const t0 = audioCtx.currentTime;
-  const master = audioCtx.createGain(); master.gain.value = 0.18/Math.sqrt(midis.length); master.connect(audioCtx.destination);
-  midis.forEach(m=>{
-    const f = 440*Math.pow(2,(m-69)/12);
-    [1,2,3].forEach((h,i)=>{
-      const o = audioCtx.createOscillator(); o.type='sine'; o.frequency.value=f*h;
-      const g = audioCtx.createGain(); g.gain.setValueAtTime(0,t0);
-      g.gain.linearRampToValueAtTime(i===0?1:0.3/h, t0+0.01);
-      g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
-      o.connect(g); g.connect(master); o.start(t0); o.stop(t0+dur+0.05);
-    });
-  });
-}
-function click(accent){
-  const t0=audioCtx.currentTime, o=audioCtx.createOscillator(), g=audioCtx.createGain();
-  o.frequency.value=accent?1600:1000; g.gain.setValueAtTime(0.25,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+0.05);
-  o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0+0.06);
-}
-
-/* ============================================================
-   Piano SVG
-   ============================================================ */
-const KEYS_FROM = 48, KEYS_TO = 83; // C3..B5
-function drawPiano(svg, targetMidis=[], liveMidis=[]){
-  const whites=[]; let x=0; const W=700/21; // 21 white keys in 3 octaves
-  let out='';
-  const isBlack = m=>[1,3,6,8,10].includes(m%12);
-  const blackPos=[];
-  for(let m=KEYS_FROM;m<=KEYS_TO;m++){
-    if(!isBlack(m)){ whites.push({m,x}); x+=W; }
-  }
-  const tgt = new Set(targetMidis), lv = new Set(liveMidis);
-  const tpc = new Set(targetMidis.map(m=>m%12));
-  whites.forEach(k=>{
-    const fill = tgt.has(k.m)?'var(--key-target)':lv.has(k.m)?'var(--key-live)':'var(--key-w)';
-    const dim = tpc.has(k.m%12)&&!tgt.has(k.m);
-    out+=`<rect x="${k.x+1}" y="2" width="${W-2}" height="146" rx="3" fill="${fill}" stroke="var(--line)"/>`;
-    if(dim) out+=`<circle cx="${k.x+W/2}" cy="132" r="5" fill="var(--key-target)" opacity=".6"/>`;
-    if(k.m%12===0) out+=`<text x="${k.x+W/2}" y="142" text-anchor="middle" font-size="11" font-family="var(--font-mono)" fill="var(--muted)">C${Math.floor(k.m/12)-1}</text>`;
-  });
-  // black keys
-  let wi=0;
-  for(let m=KEYS_FROM;m<=KEYS_TO;m++){
-    if(isBlack(m)){
-      const bx = whites[wi-1].x + W*0.65;
-      const fill = tgt.has(m)?'var(--key-target)':lv.has(m)?'var(--key-live)':'var(--key-b)';
-      out+=`<rect x="${bx}" y="2" width="${W*0.7}" height="92" rx="2" fill="${fill}" stroke="var(--key-b)"/>`;
-      if(tpc.has(m%12)&&!tgt.has(m)) out+=`<circle cx="${bx+W*0.35}" cy="80" r="4" fill="var(--key-target)" opacity=".6"/>`;
-    } else wi++;
-  }
-  svg.innerHTML = out;
-}
-
-/* ============================================================
-   Drill engine
-   ============================================================ */
-let level = LEVELS.find(l=>l.id===store.level)||LEVELS[1];
-let target = null;        // {key, midis, chord?, note?}
-let targetStart = 0;
-let holdMs = 0, lastTick = 0;
-let streak=0, sessionOk=0, sessionTimes=[];
-let prog = null;          // progression state {chords:[], idx, bpm, timer}
-let justHit = false;
-
-function levelProgress(l){
-  const items = l.kind==='prog' ? l.items : l.items;
-  const done = items.filter(i=>mastery(l.id+':'+i)===2).length;
-  return done/items.length;
-}
-function pickItem(){
-  // weighted: untrained & missed items first
-  const items = level.items.map(i=>{
-    const s = stat(level.id+':'+i);
-    const m = mastery(level.id+':'+i);
-    const w = (m===2?1:m===1?3:5) + s.miss*2;
-    return {i,w};
-  }).filter(x=>!target||x.i!==target.key.split(':')[1]||level.items.length===1);
-  const tot = items.reduce((a,b)=>a+b.w,0);
-  let r=Math.random()*tot;
-  for(const it of items){ r-=it.w; if(r<=0) return it.i; }
-  return items[0].i;
-}
-function setTarget(item){
-  stopProg();
-  const key = level.id+':'+item;
-  if(level.kind==='note'){
-    const pc = NOTE_NAMES.indexOf(item);
-    target = {key, item, note:pc, midis:[60+pc]};
-    el('targetName').innerHTML = item + (NOTE_SV[item]?` <small>${NOTE_SV[item]}</small>`:'');
-    el('fingering').innerHTML = `Spela <b>${item}</b> var som helst på klaviaturen. Högra tummen är bra att börja med.`;
-    drawPiano(el('piano'), [60+pc], []);
-  } else if(level.kind==='chord'){
-    const c = parseChord(item);
-    target = {key, item, chord:c, midis:chordVoicing(c)};
-    el('targetName').innerHTML = item.replace('#','♯') + ` <small>${CHORD_TYPES[c.type].label}</small>`;
-    el('fingering').innerHTML = fingeringText(c);
-    drawPiano(el('piano'), target.midis, []);
-  } else {
-    startProg(item.split(' '), 70, key);
-    return;
-  }
-  targetStart = performance.now(); holdMs=0; justHit=false;
-  el('holdBar').style.width='0';
-  renderChips(); renderDrillDetect();
-}
-function matches(){
-  if(!target) return false;
-  if(target.note!==undefined){
-    return liveNotes.some(m=>m%12===target.note) && liveNotes.length<=2;
-  }
-  if(!detected) return false;
-  const c = target.chord;
-  if(SYMMETRIC.has(c.type) && detected.type===c.type){
-    // Bdim7 = Ddim7 = Fdim7 = G#dim7: compare pitch-class sets
-    const a=new Set(c.pcs), b=CHORD_TYPES[detected.type].iv.map(i=>(detected.root+i)%12);
-    return b.every(p=>a.has(p));
-  }
-  if(detected.root!==c.root || detected.type!==c.type) return false;
-  if(level.id==='inv' || (prog&&prog.strictBass)) return detected.bass===(c.bass??c.root);
-  return true;
-}
-function drillTick(){
-  const now = performance.now(); const dt = lastTick?now-lastTick:16; lastTick=now;
-  if(!target || justHit) return;
-  if(matches()) holdMs+=dt; else holdMs=Math.max(0,holdMs-dt*2);
-  el('holdBar').style.width = Math.min(100,holdMs/350*100)+'%';
-  renderDrillDetect();
-  if(holdMs>=350) hit();
-}
-function hit(manual=false){
-  justHit=true;
-  const t = (performance.now()-targetStart)/1000;
-  const s = stat(target.key); s.tries++; s.ok++; s.times.push(Math.min(t,10)); if(s.times.length>10) s.times.shift();
-  if(!manual){ s.miss=Math.max(0,s.miss-1); }
-  store.days[new Date().toISOString().slice(0,10)]=1; save();
-  streak++; sessionOk++; sessionTimes.push(t);
-  el('stStreak').textContent=streak; el('stSession').textContent=sessionOk;
-  el('stAvg').textContent=(sessionTimes.reduce((a,b)=>a+b,0)/sessionTimes.length).toFixed(1);
-  el('drillCard').classList.remove('flash'); void el('drillCard').offsetWidth; el('drillCard').classList.add('flash');
-  el('detectedLine').className='detected ok'; el('detectedLine').innerHTML=`<b>Rätt!</b> ${t.toFixed(1)} s`;
-  if(prog){ progAdvance(true); return; }
-  setTimeout(()=>setTarget(pickItem()), 650);
-}
-function skip(){
-  if(target&&!prog){ const s=stat(target.key); s.tries++; s.miss++; save(); streak=0; el('stStreak').textContent=0; }
-  if(prog){ progAdvance(false); return; }
-  setTarget(pickItem());
-}
-function renderDrillDetect(){
-  if(justHit) return;
-  const line = el('detectedLine');
-  line.className='detected'+(matches()?' ok':'');
-  if(!listening&&!midiOn){ line.innerHTML = 'Tryck <b>Lyssna</b> (mikrofon) eller <b>MIDI</b> (keyboard) och spela'; return; }
-  if(target&&target.note!==undefined){
-    line.innerHTML = liveNotes.length?`Hör: <b>${liveNotes.map(m=>NOTE_NAMES[m%12]+(Math.floor(m/12)-1)).join(' ')}</b>`:'Lyssnar…';
-  } else {
-    line.innerHTML = detected?`Hör: <b>${detected.name.replace('#','♯')}</b>`:(liveNotes.length?`Toner: ${liveNotes.map(m=>NOTE_NAMES[m%12]).join(' ')}`:'Lyssnar…');
-  }
-  if(target) drawPiano(el('piano'), target.midis, liveNotes);
-}
-function renderChips(){
-  const box=el('levelChips'); box.innerHTML='';
-  level.items.forEach(i=>{
-    const d=document.createElement('span'); d.className='chip';
-    const m=mastery(level.id+':'+i); if(m===2) d.classList.add('done');
-    if(target&&target.item===i) d.classList.add('now');
-    d.textContent=i.replace(/#/g,'♯'); d.addEventListener('click',()=>setTarget(i)); box.appendChild(d);
-  });
-}
-
-/* ---------- progression / song mode with metronome ---------- */
-function startProg(chords, bpm, key, strictBass=false){
-  stopProg();
-  audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  prog = {chords, idx:0, bpm, key, beat:0, hits:0, strictBass, timer:null};
-  el('fingering').innerHTML = `<div class="seq" id="seq"></div><div class="row" style="margin-top:.5rem"><label class="inline">Tempo <input type="range" id="bpm" min="40" max="140" value="${bpm}"> <span id="bpmV" class="chip">${bpm} bpm</span></label></div>`;
-  el('bpm').addEventListener('input',e=>{prog.bpm=+e.target.value; el('bpmV').textContent=prog.bpm+' bpm'; schedule();});
-  progShow();
-  schedule();
-}
-function schedule(){
-  if(!prog) return;
-  clearInterval(prog.timer);
-  prog.timer = setInterval(()=>{
-    if(!prog) return;
-    click(prog.beat%4===0);
-    if(prog.beat%4===0 && prog.beat>0){ // new bar: advance regardless (keeps tempo honest)
-      progAdvance(justHit);
-    }
-    prog.beat++;
-  }, 60000/prog.bpm);
-}
-function progShow(){
-  const name = prog.chords[prog.idx];
-  const c = parseChord(name);
-  target = {key:prog.key, item:name, chord:c, midis:chordVoicing(c)};
-  targetStart=performance.now(); holdMs=0; justHit=false; el('holdBar').style.width='0';
-  el('targetName').innerHTML = name.replace('#','♯') + ` <small>${prog.idx+1}/${prog.chords.length}</small>`;
-  drawPiano(el('piano'), target.midis, []);
-  const seq=el('seq'); if(seq){ seq.innerHTML=''; prog.chords.forEach((ch,i)=>{ const s=document.createElement('span'); s.textContent=ch.replace('#','♯'); if(i===prog.idx) s.className='now'; else if(i<prog.idx&&prog.hitMap?.[i]) s.className='hit'; seq.appendChild(s); }); }
-  renderDrillDetect();
-}
-function progAdvance(wasHit){
-  prog.hitMap ||= {}; prog.hitMap[prog.idx]=wasHit; if(wasHit) prog.hits++;
-  prog.idx++;
-  if(prog.idx>=prog.chords.length){
-    // one full round done: score it
-    const s=stat(prog.key); s.tries++;
-    const ratio = prog.hits/prog.chords.length;
-    if(ratio>=0.8){ s.ok++; s.times.push(1.5); if(s.times.length>10) s.times.shift(); sessionOk++; streak++; }
-    else { s.miss++; streak=0; }
-    store.days[new Date().toISOString().slice(0,10)]=1; save();
-    el('stStreak').textContent=streak; el('stSession').textContent=sessionOk;
-    el('detectedLine').innerHTML = `Runda klar: <b>${prog.hits}/${prog.chords.length}</b> ackord i tid${ratio>=0.8?' – snyggt, höj tempot':' – sänk tempot 10 bpm'}`;
-    prog.idx=0; prog.hits=0; prog.hitMap={};
-    renderChips();
-  }
-  justHit=false;
-  progShow();
-}
-function stopProg(){ if(prog){ clearInterval(prog.timer); prog=null; } }
-
-/* ============================================================
-   UI wiring
-   ============================================================ */
-el('playBtn').addEventListener('click',()=>{ if(target) playNotes(target.midis); });
-el('skipBtn').addEventListener('click',skip);
-el('manualBtn').addEventListener('click',()=>{ if(target&&!justHit) hit(true); });
-
-const strip=el('levelStrip');
-LEVELS.forEach((l,i)=>{ const b=document.createElement('button'); b.className='pill'; b.dataset.id=l.id; b.setAttribute('role','tab'); b.textContent=(i+1)+' · '+l.name.replace(/^Steg \d · /,''); b.addEventListener('click',()=>setLevel(l.id)); strip.appendChild(b); });
-const sel={ set value(v){ strip.querySelectorAll('.pill').forEach(b=>b.classList.toggle('on',b.dataset.id===v)); const on=strip.querySelector('.pill.on'); if(on) on.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); }, get value(){ return level.id; } };
-function setLevel(id){
-  level=LEVELS.find(l=>l.id===id); store.level=id; save();
-  sel.value=id; el('drillLevelName').textContent=level.name; el('levelTip').textContent=level.tip;
-  target=null; setTarget(pickItem());
-}
-
-function renderLevels(){
-  const box=el('levels'); box.innerHTML='';
-  LEVELS.forEach((l,i)=>{
-    const p=levelProgress(l);
-    const d=document.createElement('div'); d.className='level'; d.setAttribute('tabindex','0'); d.setAttribute('role','button');
-    d.innerHTML=`<span class="n">${i+1}</span><div class="t"><b>${l.name.replace(/^Steg \d · /,'')}</b><small>${l.items.length} ${l.kind==='prog'?'progressioner':l.kind==='note'?'toner':'ackord'} · ${Math.round(p*100)} % bemästrat</small><div class="bar"><i style="width:${p*100}%"></i></div></div><span class="arrow">›</span>`;
-    const go=()=>{ setLevel(l.id); showView('train'); };
-    d.addEventListener('click',go); d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} });
-    box.appendChild(d);
-  });
-}
-function renderSongs(){
-  const box=el('songList'); box.innerHTML='';
-  SONGS.forEach((s,i)=>{
-    const d=document.createElement('div'); d.className='song';
-    d.innerHTML=`<h3>${s.title}</h3><div class="meta">${s.meta}</div><div class="seq">${s.chords.split(' ').map(c=>`<span>${c.replace('#','♯')}</span>`).join('')}</div><p style="margin:0;font-size:.9rem">${s.tip}</p><div class="row"><button class="primary">Träna med metronom</button><button class="ghost">▶ Lyssna</button></div>`;
-    const [train,listen]=d.querySelectorAll('button');
-    train.addEventListener('click',()=>{ level=LEVELS.find(l=>l.id==='prog'); sel.value='prog'; el('drillLevelName').textContent=s.title; el('levelTip').textContent=s.tip; el('levelChips').innerHTML=''; startProg(s.chords.split(' '), s.bpm, 'song:'+s.title); showView('train'); });
-    listen.addEventListener('click',async()=>{ audioCtx ||= new (window.AudioContext||window.webkitAudioContext)(); const cs=s.chords.split(' '); for(const c of cs){ playNotes(chordVoicing(parseChord(c)),60/s.bpm*4*0.95); await new Promise(r=>setTimeout(r,60000/s.bpm*4)); } });
-    box.appendChild(d);
-  });
-}
-/* ---------- Theory view ---------- */
-const theory={key:0,minor:false};
-const keyStrip=el('keyStrip');
-NOTE_NAMES.forEach((n,i)=>{ const b=document.createElement('button'); b.className='pill'+(i===0?' on':''); b.setAttribute('role','tab'); b.textContent=i===0?'C':`${n.replace('#','♯')}${FLAT_MAJOR_KEYS.has(i)&&n.includes('#')?'/'+FLAT_NAMES[i].replace('b','♭'):''}`; b.addEventListener('click',()=>{ theory.key=i; keyStrip.querySelectorAll('.pill').forEach((x,k)=>x.classList.toggle('on',k===i)); renderTheory(); }); keyStrip.appendChild(b); });
-el('modeSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ theory.minor=b.dataset.minor==='1'; el('modeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderTheory(); }));
-function theoryKey(){ return {key:theory.key, minor:theory.minor}; }
-function renderTheory(){
-  const {key,minor}=theoryKey();
-  const scale=minor?MINOR_SCALE:MAJOR_SCALE, qual=minor?MINOR_QUAL:MAJOR_QUAL;
-  const func=minor?['tonika','subdom.','tonika','subdom.','dominant','subdom.','dominant']:['tonika','subdom.','tonika','subdom.','dominant','tonika','dominant'];
-  const tbl=el('degtable'); tbl.innerHTML='';
-  scale.forEach((s,i)=>{
-    const name=NOTE_NAMES[(key+s)%12]+qual[i]; const fl=useFlats(key,minor);
-    const rn = qual[i]==='dim'?ROMAN[i].toLowerCase()+'°':qual[i]==='m'?ROMAN[i].toLowerCase():ROMAN[i];
-    const d=document.createElement('button'); d.className='deg'; d.dataset.chord=name;
-    d.innerHTML=`<span class="rn">${rn}</span><span class="num">${i+1}</span><b>${dn(name,fl)}</b><small>${func[i]}</small>`;
-    tbl.appendChild(d);
-  });
-  const list=el('progList'); list.innerHTML='';
-  PROGRESSIONS.forEach(p=>{
-    // progressions are written with explicit roman-numeral case, so each one carries its own mode
-    const useMinor = !!p.minor; const fl=useFlats(key,useMinor);
-    const chords=degreesToChords(p.nums,key,useMinor);
-    const keyName=dn(NOTE_NAMES[key],fl)+(useMinor?'-moll':'-dur');
-    const d=document.createElement('div'); d.className='prog';
-    d.innerHTML=`<div class="prog-head"><b>${p.name}</b><span class="mono">${p.nums} · ${keyName}</span></div><div class="seq">${chords.map(c=>`<span class="play" data-chord="${c}">${dn(c,fl)}</span>`).join('')}</div><p>${p.desc}</p><div class="row"><button class="primary small">Träna</button><button class="ghost small">▶ Lyssna</button></div>`;
-    const [train,listen]=d.querySelectorAll('button');
-    train.addEventListener('click',()=>trainProgression(chords,p.name+' i '+keyName,p.desc));
-    listen.addEventListener('click',()=>playSequence(chords,80));
-    list.appendChild(d);
-  });
-  renderCustom();
-}
-function renderCustom(){
-  const {key,minor}=theoryKey();
-  const chords=degreesToChords(el('customProg').value,key,minor); const fl=useFlats(key,minor);
-  el('customPreview').innerHTML = chords?chords.map(c=>`<span class="play" data-chord="${c}">${dn(c,fl)}</span>`).join(''):'<span style="color:var(--bad);border:0">Kunde inte tolka – använd 1–7 eller I–VII</span>';
-  el('customBtn').disabled=!chords;
-}
-function trainProgression(chords,title,tip){
-  level=LEVELS.find(l=>l.id==='prog'); sel.value='prog';
-  el('drillLevelName').textContent=title; el('levelTip').textContent=tip; el('levelChips').innerHTML='';
-  startProg(chords,70,'prog:'+chords.join(' '));
-  showView('train');
-}
-async function playSequence(chords,bpm){
-  audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') await audioCtx.resume();
-  for(const c of chords){ playNotes(chordVoicing(parseChord(c)),60/bpm*4*0.95); await new Promise(r=>setTimeout(r,60000/bpm*4)); }
-}
-el('customProg').addEventListener('input',renderCustom);
-el('customBtn').addEventListener('click',()=>{ const {key,minor}=theoryKey(); const ch=degreesToChords(el('customProg').value,key,minor); if(ch) trainProgression(ch,'Egen: '+el('customProg').value,'Din egen progression i '+dn(NOTE_NAMES[key],useFlats(key,minor))+(minor?'-moll':'-dur')); });
-// any element with data-chord: play it and show it on the drill piano
-document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-chord]'); if(!t) return;
-  const c=parseChord(t.dataset.chord); if(!c) return;
-  playNotes(chordVoicing(c));
-  let pv=el('theoryPiano');
-  if(!pv){ pv=document.createElementNS('http://www.w3.org/2000/svg','svg'); pv.id='theoryPiano'; pv.setAttribute('viewBox','0 0 700 150'); pv.setAttribute('class','piano'); }
-  const host=t.closest('.dtext')||t.closest('.prog')||t.closest('.card'); host.appendChild(pv);
-  drawPiano(pv,chordVoicing(c),[]);
-  pv.insertAdjacentHTML('afterend','');
-  let cap=host.querySelector('.pcap'); if(!cap){ cap=document.createElement('p'); cap.className='pcap'; host.appendChild(cap); }
-  cap.innerHTML=`<b>${c.name.replace('#','♯')}</b> · ${fingeringText(c)}`;
-});
-
-function renderProgress(){
-  const keys=Object.keys(store.stats);
-  el('pTotal').textContent=keys.reduce((a,k)=>a+store.stats[k].ok,0);
-  el('pMastered').textContent=keys.filter(k=>mastery(k)===2).length;
-  el('pDays').textContent=Object.keys(store.days).length;
-  const box=el('mastery'); box.innerHTML='';
-  LEVELS.forEach(l=>l.items.forEach(i=>{
-    const k=l.id+':'+i, m=mastery(k), s=store.stats[k];
-    const d=document.createElement('div'); d.className='m'+m;
-    const avg = s&&s.times.length?(s.times.reduce((a,b)=>a+b,0)/s.times.length).toFixed(1)+' s':'–';
-    d.innerHTML=`${i.replace(/#/g,'♯')}<b>${s?s.ok+' rätt · '+avg:'ej tränat'}</b>`;
-    box.appendChild(d);
-  }));
-}
-el('resetBtn').addEventListener('click',()=>{ store={stats:{},days:{},level:level.id}; save(); renderProgress(); renderLevels(); renderChips(); });
-
-// Live view
-const chromaBox=el('chroma');
-NOTE_NAMES.forEach(n=>{ const d=document.createElement('div'); d.dataset.n=n.replace('#','♯'); chromaBox.appendChild(d); });
-function renderLive(){
-  if(!el('view-listen').classList.contains('active')) return;
-  const bars=chromaBox.children;
-  for(let i=0;i<12;i++) bars[i].style.height=(smooth[i]*100)+'%';
-  el('liveChord').textContent = detected?detected.name.replace('#','♯'):(listening?'–':'–');
-  el('liveNotes').textContent = liveNotes.length?liveNotes.map(m=>NOTE_NAMES[m%12]+(Math.floor(m/12)-1)).join('  '):'';
-  drawPiano(el('pianoLive'), [], liveNotes);
-}
-
-function showView(v){
-  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+v));
-  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
-  if(v==='progress') renderProgress(); if(v==='plan') renderLevels(); if(v==='listen') renderLive(); if(v==='theory') renderTheory();
-  if(v!=='train') stopProg();
-  if(v==='train'&&!target) setTarget(pickItem());
-}
-document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
-
-// Keep screen awake while listening
-let wakeLock=null;
-document.addEventListener('visibilitychange',async()=>{ if(document.visibilityState==='visible'&&listening&&navigator.wakeLock){ try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){} } });
-micBtn.addEventListener('click',async()=>{ if(listening&&navigator.wakeLock){ try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){} } });
-
-// PWA: service worker + install prompt
-if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
-let installEvt=null;
-window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; el('installCard').hidden=false; });
-el('installBtn').addEventListener('click',async()=>{ if(!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt=null; el('installCard').hidden=true; });
-window.addEventListener('appinstalled',()=>{ el('installCard').hidden=true; });
-const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent), standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-if(isIOS&&!standalone) el('iosHint').hidden=false;
-
-// Boot
-drawPiano(el('pianoLive')); drawPiano(el('pianoHum'));
-renderSongs(); renderLevels();
-setLevel(level.id);
-</script>
+<script src="js/audio.js"></script>
+<script src="js/pianoroll.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
