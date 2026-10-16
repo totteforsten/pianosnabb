@@ -401,7 +401,8 @@ el('humBpm').addEventListener('input',e=>{ hum.bpm=+e.target.value; el('humBpmV'
 el('srcSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
   if(hum.rec) humStop();
   hum.source=b.dataset.src; el('srcSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
-  el('humCents').textContent = hum.source==='voice'?'nynna, vissla eller sjung "da-da-da"':hum.source==='piano'?'spela på pianot, mobilen lyssnar':'spela på MIDI-keyboardet';
+  el('stepPanel').hidden=hum.source!=='step'; el('gridRow').hidden=hum.source==='step';
+  el('humCents').textContent = hum.source==='voice'?'nynna, vissla eller sjung "da-da-da"':hum.source==='piano'?'spela på pianot, mobilen lyssnar':hum.source==='midi'?'spela på MIDI-keyboardet':'spela nästa ton eller ackord';
 }));
 el('gridSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
   hum.grid=+b.dataset.grid; el('gridSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
@@ -412,8 +413,10 @@ el('gridSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',(
 el('humRec').addEventListener('click', async()=>{
   if(hum.rec){ humStop(); return; }
   if(hum.source==='midi'){ if(!midiOn){ await toggleMidi(); if(!midiOn) return; } }
+  else if(hum.source==='step'){ if(!midiOn&&!listening){ if(navigator.requestMIDIAccess) await toggleMidi(); if(!midiOn) await toggleMic(); if(!midiOn&&!listening) return; } }
   else { if(!listening){ await toggleMic(); if(!listening) return; } }
   PianoAudio.init();
+  if(hum.source==='step'){ hum.rec=true; hum.practice=false; step.cursor=hum.notes.length?Math.max(...hum.notes.map(n=>n.t+n.d)):0; step.group=null; step.silence=0; el('humRec').textContent='■ Stopp'; el('humState').textContent='stegvis'; el('humState').className='chip now'; stepInfo(); return; }
   hum.rec=true; hum.practice=false; hum.raw=[]; hum.t0=0;
   hum.v={cur:null,pitchHist:[],rmsPeak:0,dipped:false,miss:0,cand:null,candN:0}; hum.p={active:new Map(),seen:new Map()};
   hum.notes=[]; humRoll.setNotes([]); el('humChordsCard').hidden=true; el('humInfo').textContent='';
@@ -421,6 +424,7 @@ el('humRec').addEventListener('click', async()=>{
 });
 function humStop(){
   if(!hum.rec) return;
+  if(hum.source==='step'){ hum.rec=false; stepCommit(); el('humRec').textContent='● Spela in'; el('humState').textContent=hum.notes.length+' toner'; el('humState').className='chip'; return; }
   const now=performance.now();
   hum.rec=false; voiceCommit(now); pianoFlush(now); midiFlush(now);
   el('humRec').textContent='● Spela in';
@@ -570,6 +574,7 @@ function humTick(){
     return;
   }
   if(!hum.rec) return;
+  if(hum.source==='step'){ stepTick(); return; }
   if(hum.source==='voice' && listening) voiceTick(now);
   else if(hum.source==='piano' && listening) pianoTick(now);
   else if(hum.source==='midi'){ el('humNote').innerHTML=(liveNotes.length?liveNotes.map(noteLabel).join(' '):'–')+`<small id="humCents">${hum.raw.length} toner inspelade</small>`; }
@@ -692,6 +697,43 @@ function humMidiEvent(cmd,d1,d2,now){
 }
 function midiFlush(now){ for(const [m,o] of midiOpen){ hum.raw.push({m,startMs:o.startMs,endMs:now,vel:o.vel}); } midiOpen.clear(); }
 function noteLabel(m){ return NOTE_NAMES[m%12].replace('#','♯')+(Math.floor(m/12)-1); }
+
+/* ---- step input: notes/chords in order, duration chosen in the UI, timing ignored ---- */
+const step={len:0.5,dot:false,trip:false,hand:'auto',cursor:0,group:null,hold:0,silence:0,history:[]};
+function stepDur(){ let d=step.len; if(step.dot) d*=1.5; if(step.trip) d*=2/3; return d; }
+function stepInfo(){ const bpb=4; el('stepInfo').textContent=`Markör: takt ${Math.floor(step.cursor/bpb)+1}, slag ${(step.cursor%bpb+1).toFixed(2).replace(/\.?0+$/,'')} · ${hum.notes.length} toner`; }
+function stepAdd(midis){
+  const d=stepDur(); const ids=[];
+  midis.forEach(m=>{ const id=(Math.max(0,...hum.notes.map(n=>n.id))+1); const hand=step.hand==='auto'?(m<60?'L':'R'):step.hand; hum.notes.push({id,t:step.cursor,d,m,vel:.8,hand}); ids.push(id); });
+  step.history.push({ids,advance:d}); step.cursor+=d;
+  PianoAudio.chord(midis,{dur:Math.max(.3,d*60/hum.bpm),strum:0});
+  humRoll.setNotes(hum.notes,true); humRoll.fitRange(); humRoll.fitRows(); humRoll.setPlayhead(step.cursor); humAfterEdit(); stepInfo();
+}
+function stepTick(){
+  const cur=midiOn?[...held.keys()]:liveNotes;
+  if(cur.length){
+    step.silence=0;
+    if(step.armed===false){ /* mic: previous step already committed; wait for a release before listening again */ }
+    else {
+      if(!step.group) step.group={midis:new Set(cur),frames:1}; else { cur.forEach(m=>step.group.midis.add(m)); step.group.frames++; }
+      if(!midiOn && step.group.frames>=12){ stepCommit(); step.armed=false; } // mic: commit after ~200 ms, then require a release
+    }
+    el('humNote').innerHTML=`${[...(step.group?step.group.midis:[])].sort((a,b)=>a-b).map(noteLabel).join(' ')||'–'}<small id="humCents">släpp för att lägga in</small>`;
+  } else {
+    if(step.group && (midiOn || ++step.silence>=3)) stepCommit();
+    else if(++step.silence>=3) step.armed=true;
+    if(!step.group) el('humNote').innerHTML=`–<small id="humCents">spela nästa ton eller ackord (${step.len===0.25?'1/16':step.len===0.5?'1/8':step.len===1?'1/4':step.len===2?'1/2':'1/1'}${step.dot?' punkt.':''}${step.trip?' triol':''})</small>`;
+  }
+  drawPiano(el('pianoHum'), step.group?[...step.group.midis]:[], cur);
+}
+function stepCommit(){ if(!step.group) return; const g=[...step.group.midis]; step.group=null; if(midiOn&&g.length===0) return; stepAdd(g); }
+el('stepLen').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ step.len=+b.dataset.len; el('stepLen').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); }));
+el('stepDot').addEventListener('click',()=>{ step.dot=!step.dot; el('stepDot').classList.toggle('on',step.dot); el('stepDot').setAttribute('aria-pressed',step.dot); });
+el('stepTrip').addEventListener('click',()=>{ step.trip=!step.trip; el('stepTrip').classList.toggle('on',step.trip); el('stepTrip').setAttribute('aria-pressed',step.trip); });
+el('stepHand').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ step.hand=b.dataset.hand; el('stepHand').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); }));
+el('stepRest').addEventListener('click',()=>{ const d=stepDur(); step.history.push({ids:[],advance:d}); step.cursor+=d; humRoll.setPlayhead(step.cursor); stepInfo(); });
+el('stepTie').addEventListener('click',()=>{ const last=step.history[step.history.length-1]; if(!last||!last.ids.length) return; const d=stepDur(); hum.notes.filter(n=>last.ids.includes(n.id)).forEach(n=>n.d+=d); step.history.push({ids:[],advance:d}); step.cursor+=d; humRoll.setNotes(hum.notes,true); humRoll.setPlayhead(step.cursor); humAfterEdit(); stepInfo(); });
+el('stepBack').addEventListener('click',()=>{ const last=step.history.pop(); if(!last) return; hum.notes=hum.notes.filter(n=>!last.ids.includes(n.id)); step.cursor=Math.max(0,step.cursor-last.advance); humRoll.setNotes(hum.notes,true); humRoll.setPlayhead(step.cursor); humAfterEdit(); stepInfo(); });
 
 /* ---- key finding (Krumhansl-Schmuckler) + one diatonic chord per half bar ---- */
 const KS_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88], KS_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
@@ -1026,7 +1068,7 @@ function recordingToPiece(name){
   const ms=ns.map(n=>n.m).sort((a,b)=>a-b);
   // split point: below C4 is left hand unless everything is low/high
   const split = ms[0]>=60 ? 0 : ms[ms.length-1]<60 ? 200 : 60;
-  ns.forEach(n=>n.hand=n.m<split?'L':'R');
+  ns.forEach((n,i)=>n.hand=hum.notes[i].hand||(n.m<split?'L':'R'));
   autoFinger(ns.filter(n=>n.hand==='R'),'R'); autoFinger(ns.filter(n=>n.hand==='L'),'L');
   const end=Math.max(...ns.map(n=>n.t+n.d)); const bpb=4; const bars=Math.ceil(end/bpb);
   const sections=[]; for(let b=0;b<bars;b+=4) sections.push([`Takt ${b+1}–${Math.min(bars,b+4)}`,b*bpb,Math.min(end,(b+4)*bpb)]);

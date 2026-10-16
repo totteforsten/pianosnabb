@@ -50,6 +50,7 @@ button:focus-visible,[tabindex]:focus-visible,summary:focus-visible,input:focus-
 button.primary{background:linear-gradient(180deg,var(--accent2),var(--accent));color:var(--accent-fg);border-color:transparent;font-weight:800;box-shadow:0 4px 14px -6px var(--accent)}
 button.ghost{background:transparent;border-color:var(--line)}
 button.small{padding:.4rem .8rem;font-size:.85rem;border-radius:10px}
+button.small.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 button[disabled]{opacity:.45;cursor:default}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding-block:.65rem;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
 .brand{font-family:var(--font-display);font-weight:900;letter-spacing:-.03em;font-size:1.3rem}
@@ -284,7 +285,24 @@ details[open].card summary::after{content:"–"}
       <div class="eyebrow">Spela in en melodi</div>
       <span id="humState" class="chip">redo</span>
     </div>
-    <div class="seg" id="srcSeg" role="tablist" aria-label="Källa" style="margin:.5rem 0 .2rem"><button class="on" data-src="voice" role="tab">Röst</button><button data-src="piano" role="tab">Piano via mikrofon</button><button data-src="midi" role="tab">MIDI</button></div>
+    <div class="seg" id="srcSeg" role="tablist" aria-label="Källa" style="margin:.5rem 0 .2rem"><button class="on" data-src="voice" role="tab">Röst</button><button data-src="piano" role="tab">Piano via mikrofon</button><button data-src="midi" role="tab">MIDI</button><button data-src="step" role="tab">Stegvis</button></div>
+    <div id="stepPanel" hidden>
+      <p class="hint" style="margin:.3rem 0 .5rem">Spela från noterna i valfritt tempo: varje ton eller ackord du spelar läggs in med vald notlängd och markören flyttar fram. Släpp tangenterna mellan stegen. Fungerar med MIDI (exakt) eller pianot via mikrofon.</p>
+      <div class="row" style="gap:.4rem">
+        <span class="hint">Längd</span>
+        <div class="seg" id="stepLen" role="tablist"><button data-len="0.25" role="tab">1/16</button><button data-len="0.5" class="on" role="tab">1/8</button><button data-len="1" role="tab">1/4</button><button data-len="2" role="tab">1/2</button><button data-len="4" role="tab">1/1</button></div>
+        <button class="small" id="stepDot" aria-pressed="false">punkt.</button>
+        <button class="small" id="stepTrip" aria-pressed="false">triol</button>
+      </div>
+      <div class="row" style="gap:.4rem;margin-top:.4rem">
+        <span class="hint">Hand</span>
+        <div class="seg" id="stepHand" role="tablist"><button data-hand="auto" class="on" role="tab">Auto (C4)</button><button data-hand="R" role="tab">Höger</button><button data-hand="L" role="tab">Vänster</button></div>
+        <button class="small" id="stepRest">Paus</button>
+        <button class="small" id="stepTie">Förläng</button>
+        <button class="small ghost" id="stepBack">⌫ Ångra</button>
+      </div>
+      <p class="hint" id="stepInfo" style="margin-top:.4rem">Markör: takt 1, slag 1</p>
+    </div>
     <div class="target" id="humNote">–<small id="humCents">nynna, vissla eller sjung "da-da-da"</small></div>
     <div class="row" style="justify-content:center;margin:.3rem 0 .6rem">
       <button id="humRec" class="primary">● Spela in</button>
