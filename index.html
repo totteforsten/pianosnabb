@@ -468,6 +468,12 @@ details[open].card summary::after{content:"–"}
       <p class="tip" id="pieceTip" style="margin-top:.8rem"></p>
     </div>
     <p class="hint" id="piecesIntro">Not för not med fingersättning. Välj hand, sänk tempot, loopa en sektion tills den sitter. I väntläget går appen vidare först när du spelat rätt tangenter (MIDI exakt, mikrofon per ton).</p>
+    <div class="card" id="importCard">
+      <div class="eyebrow">Importera noter</div>
+      <p style="margin:.3rem 0 .6rem;font-size:.9rem">Ladda ner ett arr som <b>MIDI</b> eller <b>MusicXML</b> (t.ex. från MuseScore: Ladda ner → MIDI / MusicXML) och öppna det här. Händerna tas från notsystemen, fingersättning från partituret om den finns, tempo och taktart från filen.</p>
+      <label class="row"><input type="file" id="pieceImport" accept=".mid,.midi,.musicxml,.xml,audio/midi,application/vnd.recordare.musicxml+xml" style="font:inherit;font-size:.85rem;flex:1;min-width:0"></label>
+      <p class="hint" id="importMsg" style="margin-top:.4rem"></p>
+    </div>
     <div id="pieceList" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.8rem"></div>
   </div>
 
@@ -514,6 +520,7 @@ details[open].card summary::after{content:"–"}
 
 <script src="js/audio.js"></script>
 <script src="js/pianoroll.js"></script>
+<script src="js/import.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -1041,6 +1041,25 @@ el('humSave').addEventListener('click',()=>{
   el('humName').value=''; el('humState').textContent='sparad som stycke'; el('humState').className='chip done';
   renderPieces(); showView('songs'); openPiece(allPieces().find(p=>p.id===store.pieces[store.pieces.length-1].id));
 });
+el('pieceImport').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const msg=el('importMsg'); msg.textContent='Läser '+file.name+'…';
+  try{
+    const p=await PianoImport.fromFile(file);
+    if(!p.notes.length) throw new Error('Inga toner hittades i filen');
+    const ns=p.notes;
+    // fingering from the score where present, otherwise automatic per hand
+    ['R','L'].forEach(h=>{ const hs=ns.filter(n=>n.hand===h); if(hs.some(n=>!n.f)) autoFinger(hs.filter(n=>!n.f),h); });
+    const end=Math.max(...ns.map(n=>n.t+n.d)); const bars=Math.ceil(end/p.bpb);
+    const sections=[]; for(let b=0;b<bars;b+=4) sections.push([`Takt ${b+1}–${Math.min(bars,b+4)}`,b*p.bpb,Math.min(end,(b+4)*p.bpb)]);
+    const piece={id:'user-'+Date.now(), title:p.title, composer:'Importerad '+(/\.(mid|midi)$/i.test(file.name)?'MIDI':'MusicXML'), level:'Egen', meter:p.meter, bpb:p.bpb, bpm:p.bpm, user:true, notesData:ns, sections,
+      tip:ns.some(n=>n.f&&n.fromScore)?'Fingersättning från partituret.':'Fingersättningen är automatisk där partituret saknar den – byt om något känns fel.'};
+    store.pieces ||= []; store.pieces.push(piece); save();
+    msg.textContent=`Importerade ${ns.length} toner, ${bars} takter, ${p.bpm} bpm.`;
+    renderPieces(); openPiece(allPieces().find(x=>x.id===piece.id));
+  }catch(err){ msg.textContent='Kunde inte importera: '+err.message; }
+  e.target.value='';
+});
 const PIECES=[
   {id:'fur-elise', title:'Für Elise', composer:'L. van Beethoven', level:'Medel', meter:'3/8', bpb:3, bpm:72, notes:furElise,
    sections:[['Tema A',2,27],['Fras B',25.5,39],['Tema A igen',39,51]],
