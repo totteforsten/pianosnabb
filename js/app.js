@@ -145,7 +145,7 @@ function mastery(key){ const s = store.stats[key]; if(!s||s.tries===0) return 0;
 /* ============================================================
    Audio input + chord detection
    ============================================================ */
-let audioCtx=null, analyser=null, micStream=null, listening=false;
+let audioCtx=null, analyser=null, recAnalyser=null, recData=null, micStream=null, listening=false;
 let freqData=null, timeData=null;
 const FFT = 16384;
 const chroma = new Float32Array(12);
@@ -170,6 +170,9 @@ async function toggleMic(){
     analyser.fftSize = FFT;
     analyser.smoothingTimeConstant = 0.5;
     src.connect(analyser);
+    // fast analyser for note recording: 170 ms window, no smoothing, so short notes keep their onsets
+    recAnalyser = audioCtx.createAnalyser(); recAnalyser.fftSize = 8192; recAnalyser.smoothingTimeConstant = 0.15;
+    src.connect(recAnalyser); recData = new Float32Array(recAnalyser.frequencyBinCount);
     freqData = new Float32Array(analyser.frequencyBinCount);
     timeData = new Float32Array(analyser.fftSize);
     listening = true;
@@ -566,7 +569,7 @@ function humTick(){
   if(hum.source==='voice' && listening) voiceTick(now);
   else if(hum.source==='piano' && listening) pianoTick(now);
   else if(hum.source==='midi'){ el('humNote').innerHTML=(liveNotes.length?liveNotes.map(noteLabel).join(' '):'–')+`<small id="humCents">${hum.raw.length} toner inspelade</small>`; }
-  drawPiano(el('pianoHum'), hum.raw.slice(-24).map(n=>n.m+hum.oct), hum.source==='voice'?(hum.v.cur?[hum.v.cur.m]:[]):liveNotes);
+  drawPiano(el('pianoHum'), hum.raw.slice(-24).map(n=>n.m+hum.oct), hum.source==='voice'?(hum.v.cur?[hum.v.cur.m]:[]):hum.source==='piano'?[...hum.p.active.keys()]:liveNotes);
 }
 /* voice tracker */
 function voiceTick(now){
@@ -590,13 +593,13 @@ function voiceTick(now){
     } else {
       // candidate must hold for 3 frames; an octave jump needs 5 (common vocal/whistle detection error)
       if(v.cand===m) v.candN++; else { v.cand=m; v.candN=1; }
-      const need=(v.cur&&Math.abs(m-v.cur.m)===12)?5:3;
+      const need=(v.cur&&Math.abs(m-v.cur.m)===12)?4:2;
       if(v.candN>=need){ voiceCommit(now-16*need); v.cur={m,startMs:now-16*need,vel:Math.min(1,rms*6)}; v.cand=null; v.candN=0; v.dipped=false; v.rmsPeak=rms; }
     }
   } else {
     el('humNote').innerHTML=`–<small id="humCents">lyssnar…</small>`;
     v.pitchHist=[]; v.cand=null; v.candN=0;
-    if(++v.miss>=4) voiceCommit(now-16*4);
+    if(++v.miss>=3) voiceCommit(now-16*3);
   }
 }
 function voiceCommit(now){
@@ -610,41 +613,73 @@ function voiceCommit(now){
   }
   v.cur=null;
 }
-const HUM_MIN_MS=140;
-/* piano-via-mic tracker: harmonic suppression + onset/offset hysteresis + re-articulation on level jump */
+const HUM_MIN_MS=110;
+/* piano-via-mic tracker. Own fast FFT, adaptive noise floor, onset by level jump,
+   harmonic suppression that never swallows a tone that is itself attacking. */
+function recPeaks(){
+  recAnalyser.getFloatFrequencyData(recData);
+  const sr=audioCtx.sampleRate, binHz=sr/recAnalyser.fftSize;
+  const lo=Math.floor(60/binHz), hi=Math.min(recData.length-2, Math.ceil(2500/binHz));
+  // adaptive floor: median of the band + margin, but never below the user's sensitivity floor
+  const sample=[]; for(let i=lo;i<hi;i+=7) sample.push(recData[i]); sample.sort((a,b)=>a-b);
+  const floor=Math.max(lastFloor, sample[Math.floor(sample.length/2)]+12);
+  const peaks=[];
+  for(let i=lo;i<hi;i++){
+    const db=recData[i]; if(db<floor) continue;
+    if(db<recData[i-1]||db<recData[i+1]) continue;
+    const a=recData[i-1],b=db,c=recData[i+1]; const p=0.5*(a-c)/(a-2*b+c||1e-9);
+    const f=(i+p)*binHz; const midi=Math.round(69+12*Math.log2(f/440));
+    const prev=peaks[peaks.length-1];
+    if(prev&&prev.midi===midi){ if(db>prev.db) prev.db=db; continue; }
+    peaks.push({midi,db});
+  }
+  return {peaks,floor};
+}
 function pianoTick(now){
-  const p=hum.p;
-  const peaks=lastPeaks.filter(pk=>pk.midi>=36&&pk.midi<=96&&pk.db>lastFloor+14).sort((a,b)=>a.midi-b.midi);
+  const p=hum.p; p.hist ||= [];
+  const {peaks,floor}=recPeaks();
+  const histMin=m=>{ let v=Infinity; for(const h of p.hist){ const x=h.get(m); v=Math.min(v,x===undefined?-200:x); } return v===Infinity?-200:v; };
+  const inRange=peaks.filter(pk=>pk.midi>=33&&pk.midi<=100).sort((a,b)=>a.midi-b.midi);
+  const rising=pk=>pk.db-histMin(pk.midi)>=6; // jumped up vs. the quietest of the last 3 frames: an attack
   const fundamentals=[];
-  for(const pk of peaks){
-    const harmonicOf=fundamentals.find(f=>[12,19,24,28,31,34,36].includes(pk.midi-f.midi) && f.db>pk.db-10);
+  for(const pk of inRange){
+    // a peak is a harmonic of a lower, stronger peak (octave / twelfth / double octave) unless it is attacking on its own
+    const margin={12:-3,19:0,24:3}; // the further the partial, the stronger the fundamental must be
+    const harmonicOf=fundamentals.find(f=>margin[pk.midi-f.midi]!==undefined && f.db>=pk.db+margin[pk.midi-f.midi] && (!rising(pk)||rising(f)));
     if(!harmonicOf) fundamentals.push(pk);
   }
-  const strongest=fundamentals.sort((a,b)=>b.db-a.db).slice(0,5);
+  const strongest=fundamentals.sort((a,b)=>b.db-a.db).slice(0,6);
   const present=new Map(strongest.map(pk=>[pk.midi,pk.db]));
-  // update active notes
   for(const [m,st] of p.active){
-    if(present.has(m)){
-      const db=present.get(m); st.off=0;
-      if(db>st.lastDb+7 && now-st.startMs>120){ // struck again
-        hum.raw.push({m,startMs:st.startMs,endMs:now,vel:st.vel}); st.startMs=now; st.peakDb=db; st.vel=Math.min(1,(db-lastFloor)/50);
+    const db=present.get(m);
+    if(db!==undefined && db>st.peakDb-22){
+      st.off=0;
+      if(db<st.peakDb-6) st.dropped=true; // the note has started decaying; only after this can a new strike be recognised
+      if(st.dropped && db-histMin(m)>=7 && db>=st.peakDb-6 && now-st.startMs>110){ // struck again while still ringing
+        hum.raw.push({m,startMs:st.startMs,endMs:now,vel:st.vel}); st.startMs=now; st.peakDb=db; st.vel=Math.min(1,(db-floor)/45); st.dropped=false;
       }
-      st.lastDb=Math.max(db,st.lastDb-1.5); st.peakDb=Math.max(st.peakDb,db);
-    } else if(++st.off>=5){
-      hum.raw.push({m,startMs:st.startMs,endMs:now-16*5,vel:st.vel}); p.active.delete(m);
+      st.lastDb=db; st.peakDb=Math.max(st.peakDb,db);
+    } else if(++st.off>=3){
+      if(now-16*3-st.startMs>=95) hum.raw.push({m,startMs:st.startMs,endMs:now-16*3,vel:st.vel});
+      p.active.delete(m); (p.ended ||= new Map()).set(m,now);
     }
   }
   for(const [m,db] of present){
     if(p.active.has(m)) continue;
+    // a note that just ended may only come back as a real new attack (its tail keeps showing for a while)
+    const recentlyEnded=p.ended&&p.ended.get(m)!==undefined&&now-p.ended.get(m)<500;
+    const strong=(!recentlyEnded && db>floor+18) || db-histMin(m)>=6;
+    if(recentlyEnded && db-histMin(m)<6) continue;
     const seen=(p.seen.get(m)||0)+1; p.seen.set(m,seen);
-    if(seen>=2){ p.active.set(m,{startMs:now-16,off:0,lastDb:db,peakDb:db,vel:Math.min(1,(db-lastFloor)/50)}); p.seen.delete(m); }
+    if(strong||seen>=2){ p.active.set(m,{startMs:now-(strong?0:16),off:0,lastDb:db,peakDb:db,vel:Math.min(1,(db-floor)/45)}); p.seen.delete(m); }
   }
   for(const m of [...p.seen.keys()]) if(!present.has(m)) p.seen.delete(m);
+  p.hist.push(new Map(inRange.map(pk=>[pk.midi,pk.db]))); if(p.hist.length>3) p.hist.shift();
   const names=[...p.active.keys()].sort((a,b)=>a-b).map(noteLabel).join(' ');
   el('humNote').innerHTML=`${names||'–'}<small id="humCents">${hum.raw.length} toner inspelade</small>`;
   el('humState').textContent=hum.raw.length+' toner';
 }
-function pianoFlush(now){ for(const [m,st] of hum.p.active){ hum.raw.push({m,startMs:st.startMs,endMs:now,vel:st.vel}); } hum.p.active.clear(); }
+function pianoFlush(now){ for(const [m,st] of hum.p.active){ if(now-st.startMs>=95) hum.raw.push({m,startMs:st.startMs,endMs:now,vel:st.vel}); } hum.p.active.clear(); }
 /* MIDI recorder (called from onMidi) */
 const midiOpen=new Map();
 function humMidiEvent(cmd,d1,d2,now){
@@ -966,6 +1001,41 @@ function happyBirthday(){
     ...R(8,[[0,2,72,1]]),...L(8,[[0,3,48,5]]),
   ];
 }
+/* auto-fingering for a single-hand line: neighbours get neighbouring fingers, bigger leaps re-anchor the hand */
+function autoFinger(notes, hand){
+  const sorted=[...notes].sort((a,b)=>a.t-b.t||a.m-b.m); let f=hand==='R'?3:3, prevM=null;
+  sorted.forEach(n=>{
+    if(prevM===null){ f=hand==='R'?(n.m%12===0?1:2):(hand==='L'?5:3); }
+    else {
+      const d=n.m-prevM, dir=Math.sign(d), a=Math.abs(d);
+      let step=a<=2?1:a<=4?2:a<=7?3:4;
+      let nf=f+dir*step*(hand==='L'?-1:1);
+      if(nf<1||nf>5){ nf = (dir>0) === (hand==='R') ? 1 : 5; } // hand shift: thumb under or 5 over
+      f=nf;
+    }
+    n.f=f; prevM=n.m;
+  });
+}
+function recordingToPiece(name){
+  const ns=hum.notes.map(n=>({t:n.t,d:n.d,m:n.m+hum.oct,vel:n.vel}));
+  const ms=ns.map(n=>n.m).sort((a,b)=>a-b);
+  // split point: below C4 is left hand unless everything is low/high
+  const split = ms[0]>=60 ? 0 : ms[ms.length-1]<60 ? 200 : 60;
+  ns.forEach(n=>n.hand=n.m<split?'L':'R');
+  autoFinger(ns.filter(n=>n.hand==='R'),'R'); autoFinger(ns.filter(n=>n.hand==='L'),'L');
+  const end=Math.max(...ns.map(n=>n.t+n.d)); const bpb=4; const bars=Math.ceil(end/bpb);
+  const sections=[]; for(let b=0;b<bars;b+=4) sections.push([`Takt ${b+1}–${Math.min(bars,b+4)}`,b*bpb,Math.min(end,(b+4)*bpb)]);
+  return {id:'user-'+Date.now(), title:name, composer:'Egen inspelning', level:'Egen', meter:'4/4', bpb, bpm:hum.bpm, user:true, notesData:ns, sections,
+          tip:'Fingersättningen är automatisk och bara ett förslag: byt gärna om något känns fel. Händerna delas vid C4.'};
+}
+function allPieces(){ return [...PIECES, ...(store.pieces||[]).map(p=>Object.assign({},p,{notes:()=>p.notesData.map(n=>Object.assign({},n))}))]; }
+el('humSave').addEventListener('click',()=>{
+  if(!hum.notes.length) return;
+  const name=(el('humName').value||'').trim()||('Inspelning '+new Date().toLocaleDateString('sv-SE'));
+  store.pieces ||= []; store.pieces.push(recordingToPiece(name)); save();
+  el('humName').value=''; el('humState').textContent='sparad som stycke'; el('humState').className='chip done';
+  renderPieces(); showView('songs'); openPiece(allPieces().find(p=>p.id===store.pieces[store.pieces.length-1].id));
+});
 const PIECES=[
   {id:'fur-elise', title:'Für Elise', composer:'L. van Beethoven', level:'Medel', meter:'3/8', bpb:3, bpm:72, notes:furElise,
    sections:[['Tema A',2,27],['Fras B',25.5,39],['Tema A igen',39,51]],
@@ -985,11 +1055,12 @@ const pieceRoll=new PianoRoll(el('pieceRoll'),{editable:false, ppb:44, rowH:13, 
 
 function renderPieces(){
   const box=el('pieceList'); box.innerHTML='';
-  PIECES.forEach(p=>{
+  allPieces().forEach(p=>{
     const s=store.stats['piece:'+p.id];
     const d=document.createElement('div'); d.className='piece'; d.setAttribute('role','button'); d.tabIndex=0;
-    d.innerHTML=`<div class="t"><b>${p.title}</b><small>${p.composer} · ${p.meter} · ${s?s.ok+' sektioner klarade':'inte påbörjad'}</small></div><span class="lvl">${p.level}</span>`;
-    const go=()=>openPiece(p); d.addEventListener('click',go); d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} });
+    d.innerHTML=`<div class="t"><b>${p.title}</b><small>${p.composer} · ${p.meter} · ${s?s.ok+' sektioner klarade':'inte påbörjad'}</small></div><span class="lvl">${p.level}</span>${p.user?'<button class="small ghost del" aria-label="Ta bort">✕</button>':''}`;
+    const go=()=>openPiece(p); d.addEventListener('click',e=>{ if(e.target.closest('.del')) return; go(); }); d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} });
+    const del=d.querySelector('.del'); if(del) del.addEventListener('click',()=>{ store.pieces=(store.pieces||[]).filter(x=>x.id!==p.id); save(); renderPieces(); });
     box.appendChild(d);
   });
 }

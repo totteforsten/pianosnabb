@@ -297,6 +297,11 @@ details[open].card summary::after{content:"–"}
       <div class="seg" id="humOctSeg" style="margin-left:auto" role="tablist" aria-label="Oktav"><button data-oct="-12" role="tab">−1</button><button data-oct="0" class="on" role="tab">0</button><button data-oct="12" role="tab">+1</button></div>
     </div>
     <div class="row" style="margin-top:.6rem"><label class="inline" style="flex:1">Tempo <input type="range" id="humBpm" min="50" max="160" value="100"> <span class="chip" id="humBpmV">100 bpm</span></label></div>
+    <div class="row" style="margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--line)">
+      <input type="text" id="humName" placeholder="Namn på stycket" aria-label="Namn på stycket" style="flex:1;min-width:0;font:inherit;padding:.55rem .8rem;border:1px solid var(--line2);border-radius:10px;background:var(--surface2);color:var(--fg)">
+      <button id="humSave">Spara som stycke</button>
+    </div>
+    <p class="hint">Sparas under Låtar → Fingerspel med automatisk fingersättning, händer delade vid C4 och sektioner om fyra takter. Så får du in vilken låt som helst: spela in den från högtalaren, rätta i rollen, spara.</p>
   </div>
   <div class="card" id="humChordsCard" hidden>
     <div class="eyebrow">Så spelar du den</div>
@@ -308,7 +313,7 @@ details[open].card summary::after{content:"–"}
     <div class="eyebrow">Tips</div>
     <ul style="margin:.4rem 0 0;padding-left:1.2rem;font-size:.9rem">
       <li><b>Röst:</b> "da-da-da" eller korta "doo" ger renare noter än en lång "mmm". Nynnar du lågt – använd Oktav +1.</li>
-      <li><b>Piano via mikrofon:</b> lägg mobilen nära klangbotten, spela utan pedal. Enstaka toner och tvåklanger fångas bäst; täta ackord kan tappa toner – använd MIDI för exakt.</li>
+      <li><b>Piano via mikrofon:</b> fungerar både på ett riktigt piano och på en låt ur en högtalare. Melodi och enklare ackord fångas; i täta, reverbiga ackord kan enstaka toner saknas – lägg till dem i rollen eller använd MIDI.</li>
       <li><b>MIDI:</b> koppla keyboardet och tryck MIDI uppe till höger. Allt du spelar, med anslag och timing, hamnar på rollen.</li>
       <li>Spela i ditt eget tempo. Appen räknar ut pulsen från dina anslag efteråt. Välj Fri tid för att behålla din exakta timing, eller ett rutnät för att snäppa.</li>
     </ul>
