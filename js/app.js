@@ -795,7 +795,7 @@ function pickItem(){
     const m = mastery(level.id+':'+i);
     const w = (m===2?1:m===1?3:5) + s.miss*2;
     return {i,w};
-  }).filter(x=>!target||x.i!==target.key.split(':')[1]||level.items.length===1);
+  }).filter(x=>!target||x.i!==target.item||level.items.length===1);
   const tot = items.reduce((a,b)=>a+b.w,0);
   let r=Math.random()*tot;
   for(const it of items){ r-=it.w; if(r<=0) return it.i; }
@@ -837,7 +837,7 @@ function matches(){
     return b.every(p=>a.has(p));
   }
   if(detected.root!==c.root || detected.type!==c.type) return false;
-  if(level.id==='inv' || (prog&&prog.strictBass)) return detected.bass===(c.bass??c.root);
+  if(level.id==='inv' || level.strictBass || (prog&&prog.strictBass)) return detected.bass===(c.bass??c.root);
   return true;
 }
 function drillTick(){
@@ -860,6 +860,7 @@ function hit(manual=false){
   el('drillCard').classList.remove('flash'); void el('drillCard').offsetWidth; el('drillCard').classList.add('flash');
   el('detectedLine').className='detected ok'; el('detectedLine').innerHTML=`<b>Rätt!</b> ${t.toFixed(1)} s`;
   if(prog){ progAdvance(true); return; }
+  goalProgress();
   setTimeout(()=>setTarget(pickItem()), 650);
 }
 function skip(){
@@ -928,7 +929,7 @@ function progAdvance(wasHit){
     // one full round done: score it
     const s=stat(prog.key); s.tries++;
     const ratio = prog.hits/prog.chords.length;
-    if(ratio>=0.8){ s.ok++; s.times.push(1.5); if(s.times.length>10) s.times.shift(); sessionOk++; streak++; }
+    if(ratio>=0.8){ s.ok++; s.times.push(1.5); if(s.times.length>10) s.times.shift(); sessionOk++; streak++; goalProgress(); }
     else { s.miss++; streak=0; }
     store.days[new Date().toISOString().slice(0,10)]=1; save();
     el('stStreak').textContent=streak; el('stSession').textContent=sessionOk;
@@ -1158,7 +1159,114 @@ el('pieceNext').addEventListener('click',()=>{ if(piece.mode==='play') return; c
 el('pieceClose').addEventListener('click',()=>{ stopPiece(); el('pieceCard').hidden=true; el('piecesIntro').hidden=false; el('pieceList').hidden=false; renderPieces(); });
 el('pieceBpm').addEventListener('input',e=>{ piece.bpm=+e.target.value; el('pieceBpmV').textContent=piece.bpm+' bpm'; });
 el('handSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ piece.hand=b.dataset.hand; el('handSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); const wasWait=piece.mode==='wait'; stopPiece(); buildSteps(); piece.idx=0; if(wasWait) startWait(); else showStep(); }));
-el('songMode').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ el('songMode').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); const pieces=b.dataset.mode==='pieces'; el('piecesPane').hidden=!pieces; el('chordsPane').hidden=pieces; if(!pieces) stopPiece(); }));
+el('songMode').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ el('songMode').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); const m=b.dataset.mode; el('piecesPane').hidden=m!=='pieces'; el('chordsPane').hidden=m!=='chords'; el('coursesPane').hidden=m!=='courses'; if(m!=='pieces') stopPiece(); if(m==='courses') renderCourses(); }));
+
+/* ============================================================
+   Courses: step-by-step tutorials whose exercises run in the drill engine
+   and are verified by the chord/note detector. A step is done when its goal is met.
+   exercise: {kind:'note'|'chord'|'prog', items, goal (hits or rounds), strictBass, bpm}
+   ============================================================ */
+const COURSES=[
+ {id:'rosen-10', title:'10 minuter som sparar 30 år', source:'Efter Steve Rosens metod (Pro Piano Series)', level:'Nybörjare',
+  intro:'Idén: spela från ackord, inte från noter. Lär dig formerna i handen, siffrorna i huvudet och de närmaste omvändningarna – då kan du spela nästan vilken poplåt som helst utan notblad. Varje steg har en övning som appen kontrollerar via mikrofon eller MIDI.',
+  steps:[
+   {title:'Tangentkartan', text:'Allt bygger på att du hittar rätt tangent utan att titta för länge. C ligger till vänster om två svarta, F till vänster om tre svarta. Säg tonnamnet högt när du trycker.',
+    bullets:['Hitta alla C på pianot, sedan alla F.','Fyll i de vita mellan: C D E F G A B.','Gör samma sak med stängda ögon tills du träffar rätt.'],
+    goal:'Spela 14 toner i rad rätt (appen slumpar).', ex:{kind:'note',items:['C','D','E','F','G','A','B'],goal:14}},
+   {title:'Ackordformerna i dur', text:'Ett durackord är alltid: grundton, hoppa en, ters, hoppa en, kvint. Men handen känner tre former beroende på vilka tangenter som är svarta. Lär dig formerna, inte tonnamnen.',
+    bullets:['Form 1 – alla vita: C, F, G.','Form 2 – svart i mitten: D, E, A.','Form 3 – vit, svart, svart: B. (Svarta grundtoner: Db Eb Ab har vit i mitten, F#/Gb har svart–svart–svart.)','Spela varje form tre gånger och känn hur den sitter i handen.'],
+    goal:'14 rätt ackord, fördelade på alla sju.', ex:{kind:'chord',items:['C','F','G','D','E','A','B'],goal:14}},
+   {title:'Ackordformerna i moll', text:'Moll = sänk mittentonen ett halvt steg. Formerna skiftar: Dm Em Am blir helt vita, Cm Fm Gm får svart i mitten.',
+    bullets:['Alla vita: Dm, Em, Am.','Svart i mitten: Cm, Fm, Gm.','Vit–vit–svart: Bm.','Växla dur → moll på samma grundton: C → Cm, E → Em. Bara ett finger rör sig.'],
+    goal:'14 rätt mollackord.', ex:{kind:'chord',items:['Dm','Em','Am','Cm','Fm','Gm','Bm'],goal:14}},
+   {title:'Sus-ackord: spänning och släpp', text:'Byt ut tersen mot kvarten (sus4) eller sekunden (sus2). Ackordet "håller andan" tills du släpper tillbaka tersen. Det här är det enklaste sättet att låta proffsig.',
+    bullets:['Spela Csus4 → C. Lyssna på släppet.','Gsus4 → G, Dsus4 → D.','Asus2 → A: luftigare, modernare.','Använd sus på det sista ackordet i varje fras.'],
+    goal:'12 rätt, både sus och upplösning.', ex:{kind:'chord',items:['Csus4','C','Gsus4','G','Dsus4','D','Asus2','A','Fsus2','F'],goal:12}},
+   {title:'Siffersystemet', text:'I varje durtonart är ackorden på stegen 1, 4, 5 dur och 2, 3, 6 moll. Tänk siffror i stället för namn så kan du spela samma låt i vilken tonart som helst.',
+    bullets:['I C-dur: 1=C 2=Dm 3=Em 4=F 5=G 6=Am.','I G-dur: 1=G 2=Am 3=Bm 4=C 5=D 6=Em.','Säg siffran högt när du spelar ackordet.','Öppna Teori → Siffror för att se alla tonarter.'],
+    goal:'Spela 1–4–5–1 i C och i G till metronom, en runda vardera.', ex:{kind:'prog',items:['C F G C','G C D G'],goal:2,bpm:60}},
+   {title:'"Big Four" – rundan bakom hundratals låtar', text:'1–5–6–4. I C: C G Am F. Det här är låten du redan kan: en stor del av all pop, rock och lovsång går på exakt den här rundan eller en rotation av den.',
+    bullets:['Spela C G Am F i grundläge, fyra slag per ackord.','Flytta till G-dur: G D Em C. Samma siffror.','Starta på 6:an: Am F C G – samma ackord, mörkare känsla.'],
+    goal:'Tre rundor i tid, valfria tonarter.', ex:{kind:'prog',items:['C G Am F','G D Em C','Am F C G'],goal:3,bpm:66}},
+   {title:'Basomvändningar: slash-ackord', text:'Vänster hand bestämmer vad ackordet "är". C med E i basen (C/E) är samma tre toner men låter som ett steg på väg någonstans. Så får du en basgång utan att byta ackord.',
+    bullets:['C → C/E → F: basen går C E F stegvis.','G/B mellan C och Am: basen går C B A.','Spela högerhanden stilla och flytta bara basen.'],
+    goal:'10 rätt – appen kräver rätt baston.', ex:{kind:'chord',items:['C/E','G/B','F/A','Am/C','D/F#','C/G'],goal:10,strictBass:true}},
+   {title:'Omvändningar i höger hand', text:'Ta nedersta tonen och lägg den en oktav upp: första omvändningen. Gör om det: andra. Samma ackord, tre lägen på klaviaturen.',
+    bullets:['C: C-E-G → E-G-C → G-C-E.','F: F-A-C → A-C-F → C-F-A.','G: G-B-D → B-D-G → D-G-B.','Spela alla tre lägena av varje ackord uppåt och nedåt.'],
+    goal:'12 rätt omvändningar.', ex:{kind:'chord',items:['C/E','C/G','F/A','F/C','G/B','G/D','Am/C','Am/E'],goal:12,strictBass:true}},
+   {title:'Närmaste omvändning', text:'Det stora tricket: byt alltid till det läge av nästa ackord som ligger närmast. Då rör sig handen knappt, och allt låter sammanhängande. C → G/B → Am/C → F/C: ingen ton flyttar mer än ett steg.',
+    bullets:['Spela C (C-E-G). Nästa är G: närmaste läge är B-D-G (G/B).','Sedan Am: C-E-A (Am/C). Sedan F: C-F-A (F/C).','Jämför med grundlägena – hör skillnaden.'],
+    goal:'Två rundor med rätt omvändningar, till metronom.', ex:{kind:'prog',items:['C G/B Am/C F/C','G D/F# Em/G C/G'],goal:2,bpm:56,strictBass:true}},
+   {title:'Vänsterhandsmönster', text:'Högerhanden håller ackordet, vänsterhanden ger rörelse. Tre mönster räcker länge: grundton–kvint–oktav, grundton–oktav växelvis, och en jämn puls i åttondelar på grundtonen.',
+    bullets:['Mönster A: ton 1, 5, 8 (C G C) som fjärdedelar.','Mönster B: 1 – 8 – 5 – 8 (C C G C).','Mönster C: åttondelar på grundtonen, byt på ettan.','Högerhanden byter ackord med närmaste omvändning samtidigt.'],
+    goal:'Tre rundor Big Four till metronom med valfritt mönster i vänster.', ex:{kind:'prog',items:['C G/B Am/C F/C'],goal:3,bpm:60,strictBass:false}},
+   {title:'Block, brutet, fram och tillbaka', text:'Samma treklang, tre sätt att spela den: alla toner samtidigt (block), en i taget uppåt (brutet), eller upp och ner (fram och tillbaka). Det är skillnaden mellan ackompanjemang och "spela piano".',
+    bullets:['Block: tre toner på ettan, håll.','Brutet: ton 1 2 3 som åttondelar, vila.','Fram och tillbaka: 1 2 3 2 1 2 3 2 över hela takten.','Blanda: block på ettan, brutet på tre.'],
+    goal:'Tre rundor Big Four i valfritt mönster.', ex:{kind:'prog',items:['C G Am F'],goal:3,bpm:60}},
+   {title:'Spela en riktig låt från schema', text:'Nu har du allt: former, siffror, närmaste omvändning och ett vänsterhandsmönster. Ta ett ackordschema och spela. Doomsday-reprisen i F♯-moll är ett bra test: fyra ackord, lågt tempo, mycket känsla.',
+    bullets:['Hitta formerna för F♯m, D, Bm, E, A.','Välj närmaste omvändningar så handen stannar kvar.','Bas i vänster, sus4 på sista ackordet i varje fras.'],
+    goal:'Två rundor av refrängen till metronom.', ex:{kind:'prog',items:['F#m D Bm F#m D Bm F#m F#m'],goal:2,bpm:62}},
+  ]},
+];
+const course={cur:null, step:null, goal:null};
+function courseState(id){ return (store.courses ||= {})[id] ||= {done:{}}; }
+function renderCourses(){
+  const box=el('courseList'); box.innerHTML='';
+  COURSES.forEach(c=>{
+    const st=courseState(c.id); const done=Object.keys(st.done).length;
+    const d=document.createElement('div'); d.className='course'; d.setAttribute('role','button'); d.tabIndex=0;
+    d.innerHTML=`<div class="t"><b>${c.title}</b><small>${c.source} · ${c.steps.length} steg · ${done}/${c.steps.length} klara</small><div class="bar"><i style="width:${done/c.steps.length*100}%"></i></div></div><span class="lvl">${c.level}</span>`;
+    const go=()=>openCourse(c); d.addEventListener('click',go); d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} });
+    box.appendChild(d);
+  });
+}
+function openCourse(c){
+  course.cur=c; el('courseTitle').textContent=c.title; el('courseSub').textContent=c.intro;
+  el('courseCard').hidden=false; el('courseList').hidden=true;
+  renderCourseSteps();
+}
+function renderCourseSteps(){
+  const c=course.cur, st=courseState(c.id); const box=el('courseSteps'); box.innerHTML='';
+  const done=Object.keys(st.done).length; el('courseBar').style.width=(done/c.steps.length*100)+'%';
+  const next=c.steps.findIndex((s,i)=>!st.done[i]);
+  c.steps.forEach((s,i)=>{
+    const d=document.createElement('details'); d.className='step'+(st.done[i]?' done':'')+(i===next?' next':''); if(i===next) d.open=true;
+    d.innerHTML=`<summary><span class="n">${st.done[i]?'✓':i+1}</span><span>${s.title}</span></summary>
+      <div class="body"><p>${s.text}</p><ul>${s.bullets.map(b=>`<li>${b}</li>`).join('')}</ul><p class="goal"><b>Mål:</b> ${s.goal}</p>
+      <div class="row"><button class="primary small ex">Öva nu</button><button class="small ghost mark">${st.done[i]?'Markera ej klar':'Markera klar'}</button></div></div>`;
+    d.querySelector('.ex').addEventListener('click',()=>startExercise(i));
+    d.querySelector('.mark').addEventListener('click',()=>{ if(st.done[i]) delete st.done[i]; else st.done[i]=Date.now(); save(); renderCourseSteps(); });
+    box.appendChild(d);
+  });
+}
+function startExercise(i){
+  const c=course.cur, s=c.steps[i], ex=s.ex;
+  course.step=i; course.goal={n:ex.goal,count:0};
+  stopProg();
+  const lvl={id:'course:'+c.id+':'+i, name:`${c.title} · steg ${i+1}`, kind:ex.kind, items:ex.items, tip:s.text, strictBass:!!ex.strictBass};
+  level=lvl; sel.value='__course__'; el('drillLevelName').textContent=lvl.name; el('levelTip').textContent=s.goal;
+  target=null; sessionOk=0; el('stSession').textContent=0;
+  el('goalBanner').hidden=true;
+  showView('train');
+  if(ex.kind==='prog') startProg(ex.items[0].split(' '), ex.bpm||70, lvl.id, !!ex.strictBass); else setTarget(pickItem());
+  if(ex.kind==='prog'&&ex.items.length>1){ // show the other progressions as chips to switch between
+    const box=el('levelChips'); box.innerHTML=''; ex.items.forEach(it=>{ const d=document.createElement('span'); d.className='chip'+(it===ex.items[0]?' now':''); d.textContent=it.replace(/#/g,'♯'); d.addEventListener('click',()=>{ box.querySelectorAll('.chip').forEach(x=>x.classList.toggle('now',x===d)); startProg(it.split(' '),ex.bpm||70,lvl.id,!!ex.strictBass); }); box.appendChild(d); });
+  }
+  el('drillCard').scrollIntoView({block:'start',behavior:'smooth'});
+}
+function goalProgress(){
+  if(!course.goal) return;
+  course.goal.count++;
+  const g=course.goal, left=g.n-g.count;
+  el('levelTip').textContent = left>0 ? `${g.count}/${g.n} – ${left} kvar` : 'Klart!';
+  if(g.count>=g.n){
+    const st=courseState(course.cur.id); st.done[course.step]=Date.now(); save();
+    el('goalText').textContent=`${course.cur.steps[course.step].title} är avklarat.`;
+    el('goalBanner').hidden=false; course.goal=null;
+  }
+}
+el('goalBack').addEventListener('click',()=>{ stopProg(); el('goalBanner').hidden=true; showView('songs'); el('songMode').querySelector('[data-mode=courses]').click(); openCourse(course.cur); });
+el('courseClose').addEventListener('click',()=>{ el('courseCard').hidden=true; el('courseList').hidden=false; renderCourses(); });
 
 /* ============================================================
    UI wiring
@@ -1171,6 +1279,7 @@ const strip=el('levelStrip');
 LEVELS.forEach((l,i)=>{ const b=document.createElement('button'); b.className='pill'; b.dataset.id=l.id; b.setAttribute('role','tab'); b.textContent=(i+1)+' · '+l.name.replace(/^Steg \d · /,''); b.addEventListener('click',()=>setLevel(l.id)); strip.appendChild(b); });
 const sel={ set value(v){ strip.querySelectorAll('.pill').forEach(b=>b.classList.toggle('on',b.dataset.id===v)); const on=strip.querySelector('.pill.on'); if(on) on.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); }, get value(){ return level.id; } };
 function setLevel(id){
+  course.goal=null; el('goalBanner').hidden=true;
   level=LEVELS.find(l=>l.id===id); store.level=id; save();
   sel.value=id; el('drillLevelName').textContent=level.name; el('levelTip').textContent=level.tip;
   target=null; setTarget(pickItem());
@@ -1295,7 +1404,7 @@ function renderLive(){
 function showView(v){
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+v));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
-  if(v==='progress') renderProgress(); if(v==='train') renderLevels(); if(v==='listen') renderLive(); if(v==='theory') renderTheory(); if(v==='songs') renderPieces();
+  if(v==='progress') renderProgress(); if(v==='train') renderLevels(); if(v==='listen') renderLive(); if(v==='theory') renderTheory(); if(v==='songs'){ renderPieces(); renderCourses(); }
   if(v!=='songs') stopPiece();
   if(v!=='hum'&&hum.playing){ hum.playing.stop=true; hum.playing=null; el('humPlay').textContent='▶ Spela upp'; }
   if(v!=='train') stopProg();

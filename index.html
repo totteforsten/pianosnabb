@@ -34,6 +34,7 @@
   --accent:#5b8dff; --accent2:#86a9ff; --accent-fg:#0a0f1c; --ok:#3ecf7a; --warn:#e6b53a; --bad:#f06560;
   --key-w:#e8eaee; --key-w2:#d2d5db; --key-b:#0a0b0d; --key-frame:#202329; --key-target:#5b8dff; --key-lh:#f0a848; --key-live:#3ecf7a; --shadow:0 16px 40px -16px rgba(0,0,0,.8); color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--bg);background-image:radial-gradient(900px 500px at 50% -250px,var(--bg2),transparent);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
@@ -168,6 +169,21 @@ details[open].card summary::after{content:"–"}
 .piece .t{flex:1;min-width:0}.piece .t b{font-family:var(--font-display);font-size:1.05rem}.piece .t small{display:block;color:var(--muted);font-size:.8rem}
 .piece .lvl{font-family:var(--font-mono);font-size:.75rem;color:var(--accent);border:1px solid var(--line2);border-radius:999px;padding:.2rem .55rem;white-space:nowrap}
 #songMode{align-self:flex-start}
+/* courses */
+.course{border:1px solid var(--line);border-radius:16px;padding:.9rem 1rem;background:var(--surface);display:flex;gap:.9rem;align-items:center;cursor:pointer}
+.course .t{flex:1;min-width:0}.course .t b{font-family:var(--font-display);font-size:1.05rem}.course .t small{display:block;color:var(--muted);font-size:.8rem}
+.steps{display:flex;flex-direction:column;gap:.5rem}
+.step{border:1px solid var(--line);border-radius:14px;background:var(--surface2);overflow:hidden}
+.step summary{list-style:none;cursor:pointer;display:flex;gap:.7rem;align-items:center;padding:.75rem .9rem;font-weight:700}
+.step summary::-webkit-details-marker{display:none}
+.step .n{width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:.78rem;flex:none;color:var(--muted)}
+.step.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.next .n{border-color:var(--accent);color:var(--accent)}
+.step .body{padding:0 .9rem .9rem;display:flex;flex-direction:column;gap:.6rem;font-size:.93rem}
+.step .body ul{margin:0;padding-left:1.2rem}
+.step .goal{font-size:.82rem;color:var(--muted)}
+.banner{border:1px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--surface));border-radius:12px;padding:.7rem .9rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:.6rem}
+.banner b{color:var(--ok)}
 /* hum / melody */
 .melody{display:flex;gap:4px;align-items:flex-end;min-height:72px;overflow-x:auto;padding:.4rem 0 .6rem;scrollbar-width:thin}
 .melody .empty{color:var(--muted);font-size:.85rem;align-self:center}
@@ -203,6 +219,7 @@ details[open].card summary::after{content:"–"}
       <button id="skipBtn" class="ghost">Hoppa över</button>
       <button id="manualBtn" class="ghost">Jag spelade det ✓</button>
     </div>
+    <div class="banner" id="goalBanner" hidden><b>Steget klart!</b><span id="goalText"></span><button class="small primary" id="goalBack">Tillbaka till kursen</button></div>
   </div>
 
   <div class="stats">
@@ -413,9 +430,18 @@ details[open].card summary::after{content:"–"}
 <!-- ===== LÅTAR ===== -->
 <section class="view" id="view-songs">
   <h2>Låtar</h2>
-  <div class="seg" id="songMode" role="tablist"><button class="on" data-mode="pieces" role="tab">Fingerspel</button><button data-mode="chords" role="tab">Ackordlåtar</button></div>
+  <div class="seg" id="songMode" role="tablist"><button class="on" data-mode="courses" role="tab">Kurser</button><button data-mode="pieces" role="tab">Fingerspel</button><button data-mode="chords" role="tab">Ackordlåtar</button></div>
 
-  <div id="piecesPane">
+  <div id="coursesPane">
+    <div id="courseList" style="display:flex;flex-direction:column;gap:.6rem"></div>
+    <div class="card" id="courseCard" hidden>
+      <div class="row spread"><div><div class="eyebrow" id="courseTitle"></div><div class="hint" id="courseSub"></div></div><button class="small ghost" id="courseClose">Stäng</button></div>
+      <div class="bar" style="margin:.6rem 0 .9rem"><i id="courseBar"></i></div>
+      <div class="steps" id="courseSteps"></div>
+    </div>
+  </div>
+
+  <div id="piecesPane" hidden>
     <div class="card hero" id="pieceCard" hidden>
       <div class="row spread">
         <div><div class="eyebrow" id="pieceTitle">Für Elise</div><div class="hint" id="pieceSub"></div></div>
