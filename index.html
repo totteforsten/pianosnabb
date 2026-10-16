@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PianoSnabb</title>
 <meta name="description" content="Lär dig piano snabbt: ackordigenkänning via mikrofon eller MIDI-keyboard, snabbspår och låtar.">
-<meta name="theme-color" content="#c46a1f" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#15130f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0c0e" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,23 +19,23 @@
 <style>
 /* Layout: one-screen app, bottom tab bar, drill card is the hero. Ebony/ivory palette with brass accent. */
 :root{
-  --bg:#efeae0; --bg2:#e6e0d3; --surface:#fbf9f4; --surface2:#f3efe6; --fg:#1a1712; --muted:#6e665a; --line:#d8d0c1; --line2:#c8bfae;
-  --accent:#c2671c; --accent2:#e08a3c; --accent-fg:#fff8f0; --ok:#2a8a55; --warn:#c79a1f; --bad:#b3433a;
-  --key-w:#fdfcf8; --key-w2:#ece6d8; --key-b:#1f1b17; --key-target:#f6b24f; --key-live:#6cc490; --shadow:0 10px 30px -14px rgba(40,30,10,.35);
+  --bg:#f3f4f6; --bg2:#e9ebee; --surface:#ffffff; --surface2:#f0f1f4; --fg:#111317; --muted:#656a73; --line:#dcdfe4; --line2:#c7cbd2;
+  --accent:#2f6df6; --accent2:#5b8dff; --accent-fg:#ffffff; --ok:#1f9d5a; --warn:#d29a16; --bad:#d64540;
+  --key-w:#ffffff; --key-w2:#eceef1; --key-b:#1b1d21; --key-frame:#2a2d33; --key-target:#5b8dff; --key-live:#3ecf7a; --shadow:0 12px 32px -16px rgba(10,12,16,.35);
   --font-display:"Archivo",system-ui,sans-serif; --font-body:"Manrope",system-ui,sans-serif; --font-mono:"JetBrains Mono",ui-monospace,monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#121009; --bg2:#1a160f; --surface:#1f1b14; --surface2:#262117; --fg:#f2ece0; --muted:#a69d8d; --line:#36302a; --line2:#4a4237;
-  --accent:#e68c3c; --accent2:#f5a95d; --accent-fg:#1a1208; --ok:#5fc48a; --warn:#e0b547; --bad:#e06a5f;
-  --key-w:#ece5d6; --key-w2:#d9d1bf; --key-b:#0b0a08; --key-target:#f0a848; --key-live:#5fc48a; --shadow:0 14px 34px -14px rgba(0,0,0,.7); color-scheme:dark}}
+  --bg:#0b0c0e; --bg2:#15171a; --surface:#16181c; --surface2:#1f2227; --fg:#f2f3f5; --muted:#9298a3; --line:#272a30; --line2:#363a42;
+  --accent:#5b8dff; --accent2:#86a9ff; --accent-fg:#0a0f1c; --ok:#3ecf7a; --warn:#e6b53a; --bad:#f06560;
+  --key-w:#e8eaee; --key-w2:#d2d5db; --key-b:#0a0b0d; --key-frame:#202329; --key-target:#5b8dff; --key-live:#3ecf7a; --shadow:0 16px 40px -16px rgba(0,0,0,.8); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#121009; --bg2:#1a160f; --surface:#1f1b14; --surface2:#262117; --fg:#f2ece0; --muted:#a69d8d; --line:#36302a; --line2:#4a4237;
-  --accent:#e68c3c; --accent2:#f5a95d; --accent-fg:#1a1208; --ok:#5fc48a; --warn:#e0b547; --bad:#e06a5f;
-  --key-w:#ece5d6; --key-w2:#d9d1bf; --key-b:#0b0a08; --key-target:#f0a848; --key-live:#5fc48a; --shadow:0 14px 34px -14px rgba(0,0,0,.7); color-scheme:dark}
+  --bg:#0b0c0e; --bg2:#15171a; --surface:#16181c; --surface2:#1f2227; --fg:#f2f3f5; --muted:#9298a3; --line:#272a30; --line2:#363a42;
+  --accent:#5b8dff; --accent2:#86a9ff; --accent-fg:#0a0f1c; --ok:#3ecf7a; --warn:#e6b53a; --bad:#f06560;
+  --key-w:#e8eaee; --key-w2:#d2d5db; --key-b:#0a0b0d; --key-frame:#202329; --key-target:#5b8dff; --key-live:#3ecf7a; --shadow:0 16px 40px -16px rgba(0,0,0,.8); color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);background-image:radial-gradient(1200px 600px at 50% -200px,var(--bg2),transparent);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);background-image:radial-gradient(900px 500px at 50% -250px,var(--bg2),transparent);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
 h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.15;letter-spacing:-.015em}
 h2{font-size:1.5rem;font-weight:900}
@@ -43,7 +43,7 @@ p{margin:0}
 b{font-weight:800}
 code{font-family:var(--font-mono);font-size:.85em;background:var(--surface2);padding:.1em .35em;border-radius:5px}
 .mono{font-family:var(--font-mono);font-size:.9em}
-button{font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--line2);background:var(--surface);color:var(--fg);border-radius:12px;padding:.6rem 1rem;transition:transform .08s,background .15s,border-color .15s}
+button{font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--line2);background:var(--surface);color:var(--fg);border-radius:12px;padding:.6rem 1rem;min-height:44px;touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:transform .08s,background .15s,border-color .15s}
 button:active{transform:scale(.97)}
 button:focus-visible,[tabindex]:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button.primary{background:linear-gradient(180deg,var(--accent2),var(--accent));color:var(--accent-fg);border-color:transparent;font-weight:800;box-shadow:0 4px 14px -6px var(--accent)}
@@ -54,7 +54,7 @@ button[disabled]{opacity:.45;cursor:default}
 .brand{font-family:var(--font-display);font-weight:900;letter-spacing:-.03em;font-size:1.3rem}
 .brand span{color:var(--accent)}
 .micstate{display:flex;align-items:center;gap:.45rem;font-size:.78rem;color:var(--muted)}
-.micstate button{padding:.45rem .8rem;font-size:.85rem}
+.micstate button{padding:.45rem .8rem;font-size:.85rem;min-height:38px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--line2);flex:none}
 .dot.on{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 25%,transparent);animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--ok) 10%,transparent)}}
@@ -82,7 +82,7 @@ main{flex:1;overflow-y:auto;padding-block:1rem 6.5rem;padding-left:max(16px,env(
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.6rem .8rem}
 .stat b{display:block;font-family:var(--font-display);font-size:1.5rem;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .stat span{font-size:.72rem;color:var(--muted);font-weight:700}
-.piano{width:100%;max-width:100%;height:auto;display:block;border-radius:12px;background:linear-gradient(180deg,var(--key-b),#3a332b);padding:5px 5px 6px;box-shadow:inset 0 2px 6px rgba(0,0,0,.4)}
+.piano{width:100%;max-width:100%;height:auto;display:block;border-radius:12px;background:var(--key-frame);padding:5px 5px 6px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 .chroma{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;height:96px;align-items:end;padding-bottom:1.1rem}
 .chroma div{background:linear-gradient(180deg,var(--accent2),var(--accent));border-radius:4px 4px 2px 2px;min-height:3px;position:relative;opacity:.9;transition:height .08s linear}
 .chroma div::after{content:attr(data-n);position:absolute;top:100%;left:0;right:0;text-align:center;font-size:.62rem;font-family:var(--font-mono);color:var(--muted);margin-top:4px}
@@ -98,12 +98,12 @@ main{flex:1;overflow-y:auto;padding-block:1rem 6.5rem;padding-left:max(16px,env(
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--accent2));border-radius:3px}
 .tip{border-left:3px solid var(--accent);padding:.6rem .9rem;background:color-mix(in srgb,var(--accent) 9%,var(--surface));border-radius:0 12px 12px 0;font-size:.92rem}
 .chips{display:flex;gap:.4rem;flex-wrap:wrap}
-.chip{border:1px solid var(--line2);border-radius:999px;padding:.3rem .75rem;font-family:var(--font-mono);font-size:.85rem;background:var(--surface);cursor:pointer;transition:background .15s}
+.chip{border:1px solid var(--line2);border-radius:999px;padding:.4rem .8rem;font-family:var(--font-mono);font-size:.85rem;background:var(--surface);cursor:pointer;transition:background .15s;min-height:36px;display:inline-flex;align-items:center;touch-action:manipulation}
 .chip.done{border-color:var(--ok);color:var(--ok)}
 .chip.now{background:var(--accent);color:var(--accent-fg);border-color:transparent}
 .chip.play:hover{background:var(--surface2)}
 .seq{display:flex;gap:.4rem;flex-wrap:wrap;font-family:var(--font-mono);font-size:.95rem}
-.seq span{padding:.35rem .65rem;border:1px solid var(--line2);border-radius:9px;background:var(--surface)}
+.seq span{padding:.45rem .7rem;border:1px solid var(--line2);border-radius:9px;background:var(--surface);min-height:36px;display:inline-flex;align-items:center}
 .seq span.play{cursor:pointer}
 .seq span.now{background:var(--accent);color:var(--accent-fg);border-color:transparent;box-shadow:0 4px 12px -6px var(--accent)}
 .seq span.hit{border-color:var(--ok);color:var(--ok)}
@@ -124,6 +124,15 @@ select{font:inherit;font-weight:700;padding:.45rem .7rem;border-radius:10px;bord
 .mastery div{border:1px solid var(--line);border-radius:12px;padding:.45rem;text-align:center;font-family:var(--font-mono);font-size:.85rem;background:var(--surface2)}
 .mastery div b{display:block;font-size:.68rem;color:var(--muted);font-family:var(--font-body);font-weight:700}
 .m0{opacity:.5}.m1{border-color:var(--warn)!important}.m2{border-color:var(--ok)!important;color:var(--ok)}
+/* chip strips & segmented controls (replace native selects on touch) */
+.strip{display:flex;gap:.4rem;overflow-x:auto;padding:.5rem 0 .6rem;margin:0 -2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.strip::-webkit-scrollbar{display:none}
+.pill{flex:none;border:1px solid var(--line2);background:var(--surface2);border-radius:999px;padding:.45rem .85rem;font-size:.85rem;font-weight:700;min-height:38px;white-space:nowrap;scroll-snap-align:center;color:var(--muted)}
+.pill.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.seg{display:inline-flex;align-self:flex-start;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--surface2)}
+.seg button{border:0;border-radius:0;background:transparent;min-height:40px;padding:.4rem .9rem;color:var(--muted);font-size:.85rem}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button.on{background:var(--fg);color:var(--bg)}
 /* theory */
 details.card{padding:0;overflow:hidden}
 details.card summary{list-style:none;cursor:pointer;padding:1rem 1.1rem;display:flex;align-items:center;gap:.8rem;font-family:var(--font-display);font-weight:700;font-size:1.02rem}
@@ -138,7 +147,7 @@ details[open].card summary::after{content:"–"}
 .th:hover{border-color:var(--accent)}
 .th b{font-family:var(--font-display)} .th span{font-size:.8rem;color:var(--muted)} .th em{font-size:.8rem;color:var(--accent);font-style:normal}
 .degtable{display:grid;grid-template-columns:repeat(7,1fr);gap:.3rem}
-.deg{display:flex;flex-direction:column;align-items:center;gap:.05rem;padding:.5rem .2rem;border-radius:10px;min-width:0}
+.deg{display:flex;flex-direction:column;align-items:center;gap:.05rem;padding:.5rem .2rem;border-radius:10px;min-width:0;min-height:60px}
 .deg .rn{font-family:var(--font-mono);font-size:.78rem;color:var(--accent)}
 .deg .num{font-size:.62rem;color:var(--muted)}
 .deg b{font-family:var(--font-display);font-size:.95rem}
@@ -167,10 +176,8 @@ details[open].card summary::after{content:"–"}
 <!-- ===== TRÄNA ===== -->
 <section class="view active" id="view-train">
   <div class="card hero" id="drillCard">
-    <div class="row spread">
-      <div class="eyebrow" id="drillLevelName">Steg 2 · Durackord</div>
-      <select id="levelSelect" aria-label="Välj steg"></select>
-    </div>
+    <div class="eyebrow" id="drillLevelName">Steg 2 · Durackord</div>
+    <div class="strip" id="levelStrip" role="tablist" aria-label="Välj steg"></div>
     <div class="target" id="targetName">C</div>
     <div class="detected" id="detectedLine">Tryck <b>Lyssna</b> och spela ackordet</div>
     <div class="hold"><i id="holdBar"></i></div>
@@ -240,7 +247,7 @@ details[open].card summary::after{content:"–"}
     <div class="row" style="margin-top:.8rem">
       <button id="humPlay">▶ Spela upp</button>
       <button id="humPractice" class="primary">Öva melodin</button>
-      <label class="inline" style="margin-left:auto">Oktav <select id="humOct"><option value="-12">−1</option><option value="0" selected>0</option><option value="12">+1</option></select></label>
+      <div class="seg" id="humOctSeg" style="margin-left:auto" role="tablist" aria-label="Oktav"><button data-oct="-12" role="tab">−1</button><button data-oct="0" class="on" role="tab">0</button><button data-oct="12" role="tab">+1</button></div>
     </div>
   </div>
   <div class="card" id="humChordsCard" hidden>
@@ -325,10 +332,8 @@ details[open].card summary::after{content:"–"}
     <summary><span class="eyebrow">4</span> Siffror i stället för namn: 1–4–5, I–V–vi–IV</summary>
     <div class="dtext">
       <p>Varje tonart har sju ackord, ett på varje skalsteg. Musiker pratar om dem som siffror (romerska eller vanliga) så att samma låt kan spelas i vilken tonart som helst. Stor bokstav = dur, liten = moll, ° = förminskat.</p>
-      <div class="row">
-        <label class="inline">Tonart <select id="keySel"></select></label>
-        <label class="inline"><input type="checkbox" id="minorSel"> moll</label>
-      </div>
+      <div class="strip" id="keyStrip" role="tablist" aria-label="Tonart"></div>
+      <div class="seg" id="modeSeg" role="tablist"><button class="on" data-minor="0" role="tab">Dur</button><button data-minor="1" role="tab">Moll</button></div>
       <div class="degtable" id="degtable"></div>
       <p>I dur gäller alltid: <b>I, IV, V är dur · ii, iii, vi är moll · vii° är förminskat</b>. Lär dig det en gång så kan du räkna ut vilka ackord som helst i vilken tonart som helst.</p>
     </div>
@@ -412,6 +417,7 @@ details[open].card summary::after{content:"–"}
 </nav>
 
 <script>
+const el = id=>document.getElementById(id); // used throughout; must be defined before any top-level handler wiring
 /* ============================================================
    Music theory data
    ============================================================ */
@@ -432,7 +438,12 @@ const CHORD_TYPES = {
   'add9': {iv:[0,2,4,7],label:'add9'},
   'klu':  {iv:[0,2,4],  label:'kluster'},
 };
-const SYMMETRIC = new Set(['dim7','aug']); // same pitch-class set from several roots
+const SYMMETRIC = new Set(['dim7','aug']);
+const FLAT_NAMES=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const FLAT_MAJOR_KEYS=new Set([5,10,3,8,1,6]); // F Bb Eb Ab Db Gb
+function useFlats(key,minor){ return FLAT_MAJOR_KEYS.has(minor?(key+3)%12:key); }
+// Display a chord name with the right enharmonic spelling for the key (internal names always use sharps)
+function dn(name, flats){ return name.replace(/([A-G])#/g,(m,n)=>flats?FLAT_NAMES[(NOTE_NAMES.indexOf(n)+1)%12]:n+'♯').replace(/([A-G])b/g,'$1♭'); } // same pitch-class set from several roots
 // Parse "Am/C" -> {root:9, type:'m', bass:0, name:'Am/C'}
 function parseChord(name){
   const m = name.match(/^([A-G]#?)([a-z0-9]*)(?:\/([A-G]#?))?$/);
@@ -460,12 +471,12 @@ function chordVoicing(c){
 function fingeringText(c){
   const n = CHORD_TYPES[c.type].iv.length;
   const inv = c.bass===null||c.bass===c.root ? 0 : CHORD_TYPES[c.type].iv.findIndex(i=>(c.root+i)%12===c.bass);
-  const names = chordVoicing(c).map(m=>NOTE_NAMES[m%12]).join(' – ');
+  const names = chordVoicing(c).map(m=>NOTE_NAMES[m%12].replace('#','♯')).join(' – ');
   let f;
   if(n===3) f = inv===0?'1 – 3 – 5':inv===1?'1 – 2 – 5':'1 – 3 – 5';
   else f = inv===0?'1 – 2 – 3 – 5':'1 – 2 – 4 – 5';
   const invTxt = inv===0?'grundläge':inv===1?'första omvändningen':'andra omvändningen';
-  return `Toner: <b>${names}</b> · Höger hand: ${f} (${invTxt}) · Vänster hand: ${NOTE_NAMES[c.bass??c.root]} som bas`;
+  return `Toner: <b>${names}</b> · Höger hand: ${f} (${invTxt}) · Vänster hand: ${NOTE_NAMES[c.bass??c.root].replace('#','♯')} som bas`;
 }
 
 /* ============================================================
@@ -795,11 +806,12 @@ function humStop(){
   renderMelody();
 }
 el('humClear').addEventListener('click',()=>{ hum.melody=[]; hum.practice=false; el('humChordsCard').hidden=true; el('humState').textContent='redo'; el('humState').className='chip'; renderMelody(); });
-el('humOct').addEventListener('change',()=>{ renderMelody(); if(hum.melody.length>=2) humSuggestChords(); });
+hum.oct=0;
+el('humOctSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ hum.oct=+b.dataset.oct; el('humOctSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderMelody(); if(hum.melody.length>=2) humSuggestChords(); }));
 el('humPlay').addEventListener('click',async()=>{
   if(!hum.melody.length) return;
   audioCtx ||= new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') await audioCtx.resume();
-  const oct=+el('humOct').value;
+  const oct=hum.oct;
   for(let i=0;i<hum.melody.length;i++){ const n=hum.melody[i]; markMelody(i,'now'); playNotes([n.midi+oct], Math.max(.25,n.dur/1000)); await new Promise(r=>setTimeout(r,Math.max(250,n.dur))); }
   markMelody(-1);
 });
@@ -812,7 +824,7 @@ el('humPractice').addEventListener('click',async()=>{
   practiceShow();
 });
 function practiceShow(){
-  const oct=+el('humOct').value;
+  const oct=hum.oct;
   markMelody(hum.pIdx,'now');
   drawPiano(el('pianoHum'), [hum.melody[hum.pIdx].midi+oct], liveNotes);
   el('humState').textContent=`spela ton ${hum.pIdx+1}/${hum.melody.length}`;
@@ -841,7 +853,7 @@ function humTick(){
   if(!el('view-hum').classList.contains('active')) return;
   const now=performance.now();
   if(hum.practice){
-    const oct=+el('humOct').value; const want=hum.melody[hum.pIdx].midi+oct;
+    const oct=hum.oct; const want=hum.melody[hum.pIdx].midi+oct;
     const ok = liveNotes.some(m=>m===want || m%12===want%12) && liveNotes.length<=2;
     drawPiano(el('pianoHum'), [want], liveNotes);
     hum.pHold = ok?hum.pHold+16:0;
@@ -862,7 +874,7 @@ function humTick(){
     el('humNote').innerHTML=`–<small id="humCents">lyssnar…</small>`;
     humCommit(now);
   }
-  drawPiano(el('pianoHum'), hum.melody.map(n=>n.midi+(+el('humOct').value)), hum.cur?[hum.cur.midi]:[]);
+  drawPiano(el('pianoHum'), hum.melody.map(n=>n.midi+(hum.oct)), hum.cur?[hum.cur.midi]:[]);
 }
 function humCommit(now){
   if(!hum.cur) return;
@@ -877,7 +889,7 @@ function humCommit(now){
   hum.cur=null;
 }
 function renderMelody(){
-  const box=el('melody'); const oct=+el('humOct').value;
+  const box=el('melody'); const oct=hum.oct;
   if(!hum.melody.length){ box.innerHTML='<span class="empty">Din melodi dyker upp här, ton för ton.</span>'; drawPiano(el('pianoHum')); return; }
   const lo=Math.min(...hum.melody.map(n=>n.midi)), hi=Math.max(...hum.melody.map(n=>n.midi));
   box.innerHTML='';
@@ -925,8 +937,9 @@ function humSuggestChords(){
     }
     return bestC.name;
   });
-  el('humKey').innerHTML=`Melodin går i <b>${NOTE_NAMES[key].replace('#','♯')}-${best.name}</b>. Föreslagna ackord, ett per grupp:`;
-  el('humChords').innerHTML=chords.map(c=>`<span class="play" data-chord="${c}">${c.replace('#','♯')}</span>`).join('');
+  const fl=useFlats(key,minor);
+  el('humKey').innerHTML=`Melodin går i <b>${dn(NOTE_NAMES[key],fl)}-${best.name}</b>. Föreslagna ackord, ett per grupp:`;
+  el('humChords').innerHTML=chords.map(c=>`<span class="play" data-chord="${c}">${dn(c,fl)}</span>`).join('');
   el('humChordsCard').hidden=false;
 }
 
@@ -992,7 +1005,6 @@ function drawPiano(svg, targetMidis=[], liveMidis=[]){
 /* ============================================================
    Drill engine
    ============================================================ */
-const el = id=>document.getElementById(id);
 let level = LEVELS.find(l=>l.id===store.level)||LEVELS[1];
 let target = null;        // {key, midis, chord?, note?}
 let targetStart = 0;
@@ -1167,10 +1179,9 @@ el('playBtn').addEventListener('click',()=>{ if(target) playNotes(target.midis);
 el('skipBtn').addEventListener('click',skip);
 el('manualBtn').addEventListener('click',()=>{ if(target&&!justHit) hit(true); });
 
-const sel=el('levelSelect');
-LEVELS.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; sel.appendChild(o); });
-sel.value=level.id;
-sel.addEventListener('change',()=>setLevel(sel.value));
+const strip=el('levelStrip');
+LEVELS.forEach((l,i)=>{ const b=document.createElement('button'); b.className='pill'; b.dataset.id=l.id; b.setAttribute('role','tab'); b.textContent=(i+1)+' · '+l.name.replace(/^Steg \d · /,''); b.addEventListener('click',()=>setLevel(l.id)); strip.appendChild(b); });
+const sel={ set value(v){ strip.querySelectorAll('.pill').forEach(b=>b.classList.toggle('on',b.dataset.id===v)); const on=strip.querySelector('.pill.on'); if(on) on.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); }, get value(){ return level.id; } };
 function setLevel(id){
   level=LEVELS.find(l=>l.id===id); store.level=id; save();
   sel.value=id; el('drillLevelName').textContent=level.name; el('levelTip').textContent=level.tip;
@@ -1200,30 +1211,33 @@ function renderSongs(){
   });
 }
 /* ---------- Theory view ---------- */
-const keySel=el('keySel');
-NOTE_NAMES.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n.replace('#','♯'); keySel.appendChild(o); });
-keySel.value=0;
-function theoryKey(){ return {key:+keySel.value, minor:el('minorSel').checked}; }
+const theory={key:0,minor:false};
+const keyStrip=el('keyStrip');
+NOTE_NAMES.forEach((n,i)=>{ const b=document.createElement('button'); b.className='pill'+(i===0?' on':''); b.setAttribute('role','tab'); b.textContent=i===0?'C':`${n.replace('#','♯')}${FLAT_MAJOR_KEYS.has(i)&&n.includes('#')?'/'+FLAT_NAMES[i].replace('b','♭'):''}`; b.addEventListener('click',()=>{ theory.key=i; keyStrip.querySelectorAll('.pill').forEach((x,k)=>x.classList.toggle('on',k===i)); renderTheory(); }); keyStrip.appendChild(b); });
+el('modeSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ theory.minor=b.dataset.minor==='1'; el('modeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderTheory(); }));
+function theoryKey(){ return {key:theory.key, minor:theory.minor}; }
 function renderTheory(){
   const {key,minor}=theoryKey();
   const scale=minor?MINOR_SCALE:MAJOR_SCALE, qual=minor?MINOR_QUAL:MAJOR_QUAL;
   const func=minor?['tonika','subdom.','tonika','subdom.','dominant','subdom.','dominant']:['tonika','subdom.','tonika','subdom.','dominant','tonika','dominant'];
   const tbl=el('degtable'); tbl.innerHTML='';
   scale.forEach((s,i)=>{
-    const name=NOTE_NAMES[(key+s)%12]+qual[i];
+    const name=NOTE_NAMES[(key+s)%12]+qual[i]; const fl=useFlats(key,minor);
     const rn = qual[i]==='dim'?ROMAN[i].toLowerCase()+'°':qual[i]==='m'?ROMAN[i].toLowerCase():ROMAN[i];
     const d=document.createElement('button'); d.className='deg'; d.dataset.chord=name;
-    d.innerHTML=`<span class="rn">${rn}</span><span class="num">${i+1}</span><b>${name.replace('#','♯')}</b><small>${func[i]}</small>`;
+    d.innerHTML=`<span class="rn">${rn}</span><span class="num">${i+1}</span><b>${dn(name,fl)}</b><small>${func[i]}</small>`;
     tbl.appendChild(d);
   });
   const list=el('progList'); list.innerHTML='';
   PROGRESSIONS.forEach(p=>{
-    const useMinor = p.minor??minor;
+    // progressions are written with explicit roman-numeral case, so each one carries its own mode
+    const useMinor = !!p.minor; const fl=useFlats(key,useMinor);
     const chords=degreesToChords(p.nums,key,useMinor);
+    const keyName=dn(NOTE_NAMES[key],fl)+(useMinor?'-moll':'-dur');
     const d=document.createElement('div'); d.className='prog';
-    d.innerHTML=`<div class="prog-head"><b>${p.name}</b><span class="mono">${p.nums}${p.minor?' (moll)':''}</span></div><div class="seq">${chords.map(c=>`<span class="play" data-chord="${c}">${c.replace('#','♯')}</span>`).join('')}</div><p>${p.desc}</p><div class="row"><button class="primary small">Träna</button><button class="ghost small">▶ Lyssna</button></div>`;
+    d.innerHTML=`<div class="prog-head"><b>${p.name}</b><span class="mono">${p.nums} · ${keyName}</span></div><div class="seq">${chords.map(c=>`<span class="play" data-chord="${c}">${dn(c,fl)}</span>`).join('')}</div><p>${p.desc}</p><div class="row"><button class="primary small">Träna</button><button class="ghost small">▶ Lyssna</button></div>`;
     const [train,listen]=d.querySelectorAll('button');
-    train.addEventListener('click',()=>trainProgression(chords,p.name+' i '+NOTE_NAMES[key].replace('#','♯')+(useMinor?'-moll':'-dur'),p.desc));
+    train.addEventListener('click',()=>trainProgression(chords,p.name+' i '+keyName,p.desc));
     listen.addEventListener('click',()=>playSequence(chords,80));
     list.appendChild(d);
   });
@@ -1231,8 +1245,8 @@ function renderTheory(){
 }
 function renderCustom(){
   const {key,minor}=theoryKey();
-  const chords=degreesToChords(el('customProg').value,key,minor);
-  el('customPreview').innerHTML = chords?chords.map(c=>`<span class="play" data-chord="${c}">${c.replace('#','♯')}</span>`).join(''):'<span style="color:var(--bad);border:0">Kunde inte tolka – använd 1–7 eller I–VII</span>';
+  const chords=degreesToChords(el('customProg').value,key,minor); const fl=useFlats(key,minor);
+  el('customPreview').innerHTML = chords?chords.map(c=>`<span class="play" data-chord="${c}">${dn(c,fl)}</span>`).join(''):'<span style="color:var(--bad);border:0">Kunde inte tolka – använd 1–7 eller I–VII</span>';
   el('customBtn').disabled=!chords;
 }
 function trainProgression(chords,title,tip){
@@ -1246,9 +1260,8 @@ async function playSequence(chords,bpm){
   if(audioCtx.state==='suspended') await audioCtx.resume();
   for(const c of chords){ playNotes(chordVoicing(parseChord(c)),60/bpm*4*0.95); await new Promise(r=>setTimeout(r,60000/bpm*4)); }
 }
-keySel.addEventListener('change',renderTheory); el('minorSel').addEventListener('change',renderTheory);
 el('customProg').addEventListener('input',renderCustom);
-el('customBtn').addEventListener('click',()=>{ const {key,minor}=theoryKey(); const ch=degreesToChords(el('customProg').value,key,minor); if(ch) trainProgression(ch,'Egen: '+el('customProg').value,'Din egen progression i '+NOTE_NAMES[key].replace('#','♯')); });
+el('customBtn').addEventListener('click',()=>{ const {key,minor}=theoryKey(); const ch=degreesToChords(el('customProg').value,key,minor); if(ch) trainProgression(ch,'Egen: '+el('customProg').value,'Din egen progression i '+dn(NOTE_NAMES[key],useFlats(key,minor))+(minor?'-moll':'-dur')); });
 // any element with data-chord: play it and show it on the drill piano
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-chord]'); if(!t) return;
