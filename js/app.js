@@ -130,6 +130,10 @@ const SONGS = [
   {title:'Ja må du leva', meta:'C–G–C–F–C–G–C · 110 bpm', chords:'C G C F C G C', bpm:110, tip:'Första låten att spela för folk. Melodin ligger i höger hand, så öva ackorden i vänster hand här.'},
   {title:'ii–V–I i C (jazzgrunden)', meta:'Dm7–G7–Cmaj7 · 70 bpm', chords:'Dm7 G7 Cmaj7 Cmaj7', bpm:70, tip:'Spela Dm7 som F-A-C-D, G7 som F-G-B-D, Cmaj7 som E-G-B-C: då rör sig bara en eller två toner per byte.'},
   {title:'Andalusisk kadens', meta:'Am–G–F–E · 100 bpm · Flamenco/filmmusik', chords:'Am G F E', bpm:100, tip:'E-dur efter F är det som ger spänningen. Håll E lite längre innan du går tillbaka till Am.'},
+  {title:'Doomsday (piano reprise) – vers', meta:'Architects · F♯-moll · 62 bpm · ackord enligt chordu.com och cifras.com.br', chords:'D F#m D F#m A D F#m D E F#m', bpm:62,
+   tip:'Spela ackorden brutet: bas med vänster hand, sedan terts–kvint–oktav i höger som åttondelar. Melodin spelar du in själv från högtalaren under Spela in och sparar som fingerspel-stycke.'},
+  {title:'Doomsday (piano reprise) – refräng', meta:'Architects · F♯-moll · 62 bpm · ackord enligt chordu.com och cifras.com.br', chords:'F#m D Bm F#m D Bm F#m F#m', bpm:62,
+   tip:'F♯m–D–Bm är i–VI–iv: samma funktioner som popkadensen men i moll. Håll pedalen genom varje ackord och byt rent på ettan.'},
 ];
 
 /* ============================================================
