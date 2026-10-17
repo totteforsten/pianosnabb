@@ -1093,7 +1093,9 @@ el('pieceImport').addEventListener('change',async e=>{
     // fingering from the score where present, otherwise automatic per hand
     ['R','L'].forEach(h=>{ const hs=ns.filter(n=>n.hand===h); if(hs.some(n=>!n.f)) autoFinger(hs.filter(n=>!n.f),h); });
     const end=Math.max(...ns.map(n=>n.t+n.d)); const bars=Math.ceil(end/p.bpb);
-    const sections=[]; for(let b=0;b<bars;b+=4) sections.push([`Takt ${b+1}–${Math.min(bars,b+4)}`,b*p.bpb,Math.min(end,(b+4)*p.bpb)]);
+    const sections=[];
+    if(bars>16) for(let b=0;b<bars;b+=8) sections.push([`Takt ${b+1}–${Math.min(bars,b+8)}`,b*p.bpb,Math.min(end,(b+8)*p.bpb)]);
+    for(let b=0;b<bars;b+=4) sections.push([`${b+1}–${Math.min(bars,b+4)}`,b*p.bpb,Math.min(end,(b+4)*p.bpb)]);
     const piece={id:'user-'+Date.now(), title:p.title, composer:'Importerad '+(/\.(mid|midi)$/i.test(file.name)?'MIDI':'MusicXML'), level:'Egen', meter:p.meter, bpb:p.bpb, bpm:p.bpm, user:true, notesData:ns, sections,
       tip:ns.some(n=>n.f&&n.fromScore)?'Fingersättning från partituret.':'Fingersättningen är automatisk där partituret saknar den – byt om något känns fel.'};
     store.pieces ||= []; store.pieces.push(piece); save();
