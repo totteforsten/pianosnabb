@@ -1072,7 +1072,7 @@ function recordingToPiece(name){
   autoFinger(ns.filter(n=>n.hand==='R'),'R'); autoFinger(ns.filter(n=>n.hand==='L'),'L');
   const end=Math.max(...ns.map(n=>n.t+n.d)); const bpb=4; const bars=Math.ceil(end/bpb);
   const sections=[]; for(let b=0;b<bars;b+=4) sections.push([`Takt ${b+1}–${Math.min(bars,b+4)}`,b*bpb,Math.min(end,(b+4)*bpb)]);
-  return {id:'user-'+Date.now(), title:name, composer:'Egen inspelning', level:'Egen', meter:'4/4', bpb, bpm:hum.bpm, user:true, notesData:ns, sections,
+  return {id:'user-'+Date.now(), keySharps:estimateSharps(ns), title:name, composer:'Egen inspelning', level:'Egen', meter:'4/4', bpb, bpm:hum.bpm, user:true, notesData:ns, sections,
           tip:'Fingersättningen är automatisk och bara ett förslag: byt gärna om något känns fel. Händerna delas vid C4.'};
 }
 function allPieces(){ return [...PIECES, ...(store.pieces||[]).map(p=>Object.assign({},p,{notes:()=>p.notesData.map(n=>Object.assign({},n))}))]; }
@@ -1083,6 +1083,9 @@ el('humSave').addEventListener('click',()=>{
   el('humName').value=''; el('humState').textContent='sparad som stycke'; el('humState').className='chip done';
   renderPieces(); showView('songs'); openPiece(allPieces().find(p=>p.id===store.pieces[store.pieces.length-1].id));
 });
+function estimateSharps(ns){ // pick the sharp-key signature (0..6) whose scale covers the most note weight
+  const prof=new Array(12).fill(0); ns.forEach(n=>prof[n.m%12]+=n.d);
+  let best={k:0,s:-1}; for(let k=0;k<=6;k++){ const tonic=(k*7)%12; const sc=MAJOR_SCALE.map(x=>(tonic+x)%12); const s=sc.reduce((a,pc)=>a+prof[pc],0); if(s>best.s) best={k,s}; } return best.k; }
 el('pieceImport').addEventListener('change',async e=>{
   const file=e.target.files[0]; if(!file) return;
   const msg=el('importMsg'); msg.textContent='Läser '+file.name+'…';
@@ -1096,7 +1099,8 @@ el('pieceImport').addEventListener('change',async e=>{
     const sections=[];
     if(bars>16) for(let b=0;b<bars;b+=8) sections.push([`Takt ${b+1}–${Math.min(bars,b+8)}`,b*p.bpb,Math.min(end,(b+8)*p.bpb)]);
     for(let b=0;b<bars;b+=4) sections.push([`${b+1}–${Math.min(bars,b+4)}`,b*p.bpb,Math.min(end,(b+4)*p.bpb)]);
-    const piece={id:'user-'+Date.now(), title:p.title, composer:'Importerad '+(/\.(mid|midi)$/i.test(file.name)?'MIDI':'MusicXML'), level:'Egen', meter:p.meter, bpb:p.bpb, bpm:p.bpm, user:true, notesData:ns, sections,
+    const keySharps=estimateSharps(ns);
+    const piece={id:'user-'+Date.now(), keySharps, title:p.title, composer:'Importerad '+(/\.(mid|midi)$/i.test(file.name)?'MIDI':'MusicXML'), level:'Egen', meter:p.meter, bpb:p.bpb, bpm:p.bpm, user:true, notesData:ns, sections,
       tip:ns.some(n=>n.f&&n.fromScore)?'Fingersättning från partituret.':'Fingersättningen är automatisk där partituret saknar den – byt om något känns fel.'};
     store.pieces ||= []; store.pieces.push(piece); save();
     msg.textContent=`Importerade ${ns.length} toner, ${bars} takter, ${p.bpm} bpm.`;
@@ -1105,7 +1109,7 @@ el('pieceImport').addEventListener('change',async e=>{
   e.target.value='';
 });
 const PIECES=[
-  {id:'fur-elise', title:'Für Elise', composer:'L. van Beethoven', level:'Medel', meter:'3/8', bpb:3, bpm:72, notes:furElise,
+  {id:'fur-elise', keySharps:0, title:'Für Elise', composer:'L. van Beethoven', level:'Medel', meter:'3/8', bpb:3, bpm:72, notes:furElise,
    sections:[['Tema A',2,27],['Fras B',25.5,39],['Tema A igen',39,51]],
    tip:'Höger hand: fingrarna 4–3 på E–D♯ hela vägen, det är det som gör att det flyter. Vänster hand spelar tre toner och vilar – lägg in den först när höger sitter i tempo 60.'},
   {id:'ode', title:'Ode till glädjen', composer:'L. van Beethoven', level:'Lätt', meter:'4/4', bpb:4, bpm:84, notes:odeToJoy,
@@ -1156,9 +1160,10 @@ function buildSteps(){
   ns.forEach(n=>{ const last=steps[steps.length-1]; if(last&&Math.abs(last.t-n.t)<0.01) last.notes.push(n); else steps.push({t:n.t,notes:[n]}); });
   piece.steps=steps; piece.notes=ns;
 }
+function drawStaff(cursor){ const bpb=piece.cur.bpb||4; const from=Math.floor(cursor/(bpb*2))*(bpb*2); Staff.draw(el('pieceStaff'), piece.all, {from, beats:bpb*2, bpb, cursor, names:el('staffNames').checked, keySharps:piece.cur.keySharps||0}); }
 function showStep(){
   const st=piece.steps[piece.idx]; if(!st){ el('pieceStep').textContent='–'; return; }
-  pieceRoll.setPlayhead(st.t);
+  pieceRoll.setPlayhead(st.t); drawStaff(st.t);
   drawPiano(el('pianoPiece'), st.notes, liveNotes);
   const rh=st.notes.filter(n=>n.hand==='R'), lh=st.notes.filter(n=>n.hand==='L');
   const fmt=ns=>ns.map(n=>`${noteLabel(n.m)}<sup>${n.f}</sup>`).join(' ');
@@ -1203,7 +1208,7 @@ function startPlay(){
   (function frame(){
     if(job.stop) return;
     const b=(PianoAudio.now-start)/bm;
-    pieceRoll.setPlayhead(b+from);
+    pieceRoll.setPlayhead(b+from); drawStaff(b+from);
     const active=shifted.filter(n=>b>=n.t&&b<n.t+n.d);
     drawPiano(el('pianoPiece'), active, []);
     const i=piece.steps.findIndex(s=>s.t>b+from); piece.idx=Math.max(0,(i<0?piece.steps.length:i)-1);
@@ -1219,6 +1224,8 @@ el('pieceWait').addEventListener('click',()=>{ if(piece.mode==='wait'){ stopPiec
 el('piecePlay').addEventListener('click',startPlay);
 el('pieceStop').addEventListener('click',()=>{ stopPiece(); showStep(); });
 el('pieceNext').addEventListener('click',()=>{ if(piece.mode==='play') return; const st=piece.steps[piece.idx]; if(st) PianoAudio.chord(st.notes.map(n=>n.m),{dur:.7,strum:0}); piece.idx=(piece.idx+1)%piece.steps.length; piece.hold=0; showStep(); });
+el('staffNames').addEventListener('change',()=>{ const st=piece.steps[piece.idx]; drawStaff(st?st.t:0); });
+el('pieceGame').addEventListener('click',()=>{ stopPiece(); PlayMode.open(piece.cur,{range:piece.range,hand:piece.hand,bpm:piece.bpm}); });
 el('pieceClose').addEventListener('click',()=>{ stopPiece(); el('pieceCard').hidden=true; el('piecesIntro').hidden=false; el('pieceList').hidden=false; renderPieces(); });
 el('pieceBpm').addEventListener('input',e=>{ piece.bpm=+e.target.value; el('pieceBpmV').textContent=piece.bpm+' bpm'; });
 el('handSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ piece.hand=b.dataset.hand; el('handSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); const wasWait=piece.mode==='wait'; stopPiece(); buildSteps(); piece.idx=0; if(wasWait) startWait(); else showStep(); }));

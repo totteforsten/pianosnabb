@@ -185,6 +185,29 @@ details[open].card summary::after{content:"–"}
 .step .goal{font-size:.82rem;color:var(--muted)}
 .banner{border:1px solid var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--surface));border-radius:12px;padding:.7rem .9rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:.6rem}
 .banner b{color:var(--ok)}
+/* staff */
+.staff-wrap{margin:.6rem 0 .2rem}
+.staff{width:100%;height:230px;display:block;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+/* play mode */
+#playWrap{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;touch-action:none}
+#playWrap canvas{flex:1;display:block;touch-action:none}
+body.playing{overflow:hidden}
+body.playing .tabs,body.playing .topbar{display:none}
+.play-hud{display:flex;align-items:center;gap:.4rem;padding:.3rem max(10px,env(safe-area-inset-right,0px)) calc(.3rem + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));background:var(--surface);border-top:1px solid var(--line);font-size:.8rem}
+.ph-stat{display:flex;flex-direction:column;align-items:center;min-width:46px;line-height:1.1}
+.ph-stat b{font-family:var(--font-display);font-size:1rem;font-variant-numeric:tabular-nums}
+.ph-stat span{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ph-spacer{flex:1}
+.ph-btn{min-height:34px;padding:.3rem .6rem;font-size:.78rem;border-radius:9px}
+.ph-btn.primary{min-width:44px}
+.ph-bpm{font-family:var(--font-mono);min-width:2.5ch;text-align:center}
+.play-rotate{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;background:var(--bg);z-index:2;font-weight:700;padding:2rem}
+.play-rotate .big{font-size:3rem;margin-bottom:.5rem}
+.play-end{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 70%,transparent);z-index:3}
+.pe-card{background:var(--surface);border:1px solid var(--line2);border-radius:18px;padding:1.2rem 1.5rem;text-align:center;box-shadow:var(--shadow);max-width:90vw}
+.pe-card b{display:block;font-family:var(--font-display);font-size:2.6rem;font-weight:900;letter-spacing:-.03em}
+.pe-card p{color:var(--muted);margin:.3rem 0 .9rem;font-size:.9rem}
+.pe-card .row{justify-content:center}
 /* hum / melody */
 .melody{display:flex;gap:4px;align-items:flex-end;min-height:72px;overflow-x:auto;padding:.4rem 0 .6rem;scrollbar-width:thin}
 .melody .empty{color:var(--muted);font-size:.85rem;align-self:center}
@@ -470,9 +493,11 @@ details[open].card summary::after{content:"–"}
       <div class="hold"><i id="pieceHold"></i></div>
       <svg class="piano" id="pianoPiece" viewBox="0 0 700 150" role="img" aria-label="Klaviatur stycke"></svg>
       <div class="legend"><span><i class="sw R"></i>Höger hand</span><span><i class="sw L"></i>Vänster hand</span><span><i class="sw live"></i>Du spelar</span></div>
+      <div class="staff-wrap"><canvas id="pieceStaff" class="staff"></canvas><label class="inline" style="margin-top:.3rem"><input type="checkbox" id="staffNames" checked> visa notnamn</label></div>
       <div class="roll-wrap"><div class="roll" id="pieceRoll"></div></div>
       <div class="row" style="margin-top:.6rem">
-        <button id="pieceWait" class="primary">Vänta på mig</button>
+        <button id="pieceGame" class="primary">🎮 Spela (liggande)</button>
+        <button id="pieceWait">Vänta på mig</button>
         <button id="piecePlay">▶ Spela upp</button>
         <button id="pieceStop" class="ghost" hidden>■ Stopp</button>
         <button id="pieceNext" class="ghost">Nästa steg ›</button>
@@ -539,6 +564,8 @@ details[open].card summary::after{content:"–"}
 <script src="js/audio.js"></script>
 <script src="js/pianoroll.js"></script>
 <script src="js/import.js"></script>
+<script src="js/staff.js"></script>
+<script src="js/play.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
